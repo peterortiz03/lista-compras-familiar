@@ -2,14 +2,19 @@ import { useState } from 'react'
 import { ProductForm } from './components/ProductForm.tsx'
 import { ShoppingList } from './components/ShoppingList.tsx'
 import { Icon } from './components/Icon.tsx'
+import { PurchaseDialog } from './components/PurchaseDialog.tsx'
+import { PurchaseHistory } from './components/PurchaseHistory.tsx'
 import { createInitialState } from './data.ts'
-import { addProduct, removePending, updateQuantity } from './lib/shopping.ts'
+import { addProduct, recordPurchase, removePending, updateQuantity } from './lib/shopping.ts'
 import type { Product, ProductDraft } from './types.ts'
 
 export default function App() {
   const [state, setState] = useState(createInitialState)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [notice, setNotice] = useState('')
+  const [buyingId, setBuyingId] = useState<string | null>(null)
+  const buyingProduct = state.catalog.find((product) => product.id === buyingId)
+  const buyingItem = state.pending.find((item) => item.productId === buyingId)
   const editingProduct = state.catalog.find((product) => product.id === editingId)
   const editingItem = state.pending.find((item) => item.productId === editingId)
   const editing = editingProduct && editingItem ? { product: editingProduct, quantity: editingItem.quantity } : null
@@ -33,10 +38,20 @@ export default function App() {
     setNotice('Cantidad actualizada. Ya está lista para la próxima compra.')
   }
 
-  function handleRemove(product: Product, bought: boolean) {
+  function handleRemove(product: Product) {
     setState((current) => removePending(current, product.id))
     if (editingId === product.id) setEditingId(null)
-    setNotice(bought ? `${product.name} se marcó como comprado y salió de pendientes.` : `${product.name} se eliminó de pendientes.`)
+    setNotice(`${product.name} se eliminó de pendientes.`)
+  }
+
+  function handlePurchase(quantity: number) {
+    if (!buyingProduct || !buyingItem) return
+    const id = crypto.randomUUID()
+    const date = new Date().toISOString()
+    setState((current) => recordPurchase(current, buyingProduct.id, quantity, id, date))
+    if (editingId === buyingProduct.id) setEditingId(null)
+    setBuyingId(null)
+    setNotice(`${buyingProduct.name}: compra registrada.${quantity < buyingItem.quantity ? ' El resto sigue pendiente.' : ' Ya no queda pendiente.'}`)
   }
 
   return (
@@ -75,14 +90,18 @@ export default function App() {
         <div role="status" aria-live="polite" aria-atomic="true" className={notice ? 'mb-5 flex items-start gap-2 rounded-xl border border-[#caddcd] bg-sage px-4 py-3 text-sm text-forest' : 'sr-only'}>{notice && <Icon name="check" size={18} style={{ flexShrink: 0, marginTop: 1 }} />}{notice}</div>
 
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <ShoppingList state={state} onEdit={handleEdit} onRemove={(product) => handleRemove(product, false)} onBuy={(product) => handleRemove(product, true)} />
+          <div className="min-w-0">
+            <ShoppingList state={state} onEdit={handleEdit} onRemove={handleRemove} onBuy={(product) => setBuyingId(product.id)} />
+            <PurchaseHistory history={state.history} />
+          </div>
           <div className="space-y-5 lg:sticky lg:top-6">
             <ProductForm key={editingId ?? 'new'} catalog={state.catalog} pendingIds={state.pending.map((item) => item.productId)} editing={editing} onAdd={handleAdd} onSave={handleSave} onEdit={handleEdit} onCancel={() => setEditingId(null)} />
             <div className="flex items-start gap-3 px-2 py-1"><Icon name="leaf" size={21} style={{ color: '#245c46', flexShrink: 0, marginTop: 2 }} /><div><h2 className="text-sm font-semibold">Una lista que va creciendo</h2><p className="mt-1 text-xs leading-relaxed text-muted">Tus productos quedan en el catálogo de esta sesión, incluso después de comprarlos.</p></div></div>
           </div>
         </div>
-        <footer className="mt-10 flex flex-col justify-between gap-2 border-t border-line pt-5 text-xs text-muted sm:flex-row"><p>Hecha para la vida de todos los días.</p><p>Primera entrega · Datos temporales</p></footer>
+        <footer className="mt-10 flex flex-col justify-between gap-2 border-t border-line pt-5 text-xs text-muted sm:flex-row"><p>Hecha para la vida de todos los días.</p><p>Segunda entrega · Datos temporales</p></footer>
       </main>
+      {buyingProduct && buyingItem && <PurchaseDialog product={buyingProduct} pending={buyingItem.quantity} onSave={handlePurchase} onCancel={() => setBuyingId(null)} />}
     </div>
   )
 }

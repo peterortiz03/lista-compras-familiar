@@ -1,4 +1,4 @@
-# Cómo funciona la aplicación — Entrega 1
+# Cómo funciona la aplicación — Entrega 2
 
 ## 1. Qué corre y dónde
 
@@ -33,6 +33,7 @@ Los tipos se eliminan al generar JavaScript. **No validan por sí solos lo que e
 
 - `catalog`: productos conocidos, con identificador, nombre y unidad.
 - `pending`: referencias a productos que faltan comprar, con su cantidad.
+- `history`: eventos de compra, con cantidad, nombre, unidad y momento de la compra.
 
 Por ejemplo, el catálogo contiene Leche y el pendiente guarda algo equivalente a `{ productId: 'leche', quantity: 2 }`. Se relacionan por el identificador. Esto se parece a una referencia entre objetos y prepara la idea de una clave foránea en una futura base relacional, sin implementar todavía esa base.
 
@@ -88,7 +89,7 @@ Al tocar una cantidad, `App` guarda el identificador en edición. El formulario 
 
 `useRef` permite apuntar al campo de cantidad para enfocarlo; `useEffect` realiza ese enfoque después de que React muestra el formulario de edición. Las reglas de negocio siguen en funciones normales. No hacen falta efectos para calcular sugerencias o filtrar la lista.
 
-Comprar y eliminar usan por ahora `removePending`: ambas acciones retiran el pendiente y muestran mensajes diferentes. No se crea historial. En la siguiente etapa la compra tendrá su propio registro.
+Eliminar usa `removePending` y no crea una compra. Comprar abre `PurchaseDialog`; al confirmar, `recordPurchase` reduce el pendiente y agrega un registro al historial en una sola actualización de estado.
 
 La búsqueda de pendientes y las sugerencias usan la misma normalización: `Café`, `CAFE` y ` café ` coinciden. No hay búsqueda semántica ni detección de sinónimos. React usa `key={product.id}` en las filas para identificar cada producto aunque la lista cambie.
 
@@ -127,4 +128,18 @@ Primero recorré la interfaz siguiendo el README. Después seguí una sola acci�
 
 Ejecutá `npm.cmd test` y leé el caso de duplicados: crea un estado, realiza una operación y comprueba el resultado con `assert`, parecido a las aserciones de Python. Estas funciones no necesitan navegador ni React para probarse.
 
-Al agregar compras parciales ampliaremos los datos y las funciones antes de conectar una base de datos. Esta guía se actualizará con los conceptos que realmente incorporemos en esa etapa.
+Las compras parciales ya están implementadas. El siguiente aprendizaje será guardar y recuperar los datos, conservando las validaciones.
+
+## 11. Compras parciales e historial (segunda entrega)
+
+`recordPurchase` recibe el estado, el producto, la cantidad comprada, un identificador y una fecha. Recibir esos valores mantiene la función independiente del reloj y del navegador y facilita probarla. `App` genera la fecha con `new Date().toISOString()`, en UTC; `PurchaseHistory` la muestra en el horario local del navegador con `Intl.DateTimeFormat`.
+
+La operación valida que la compra sea positiva, respete la unidad y no supere el pendiente. Si hay cinco huevos y comprás tres, conserva dos y registra tres comprados. Al comprar los dos restantes retira el pendiente y agrega otro evento. Ambos cambios ocurren en un mismo objeto nuevo, sin estados intermedios inconsistentes.
+
+JavaScript usa coma flotante: `0.3 - 0.1` puede producir una aproximación. Como admitimos hasta tres decimales, restamos en milésimas enteras y dividimos por mil al final. Así quedan exactamente `0.2` litros pendientes.
+
+El nuevo tipo `Purchase` conserva nombre, unidad, cantidad, fecha e identificador. Guardar el nombre y la unidad es una instantánea del momento de la compra; permitirá preservar los registros si más adelante se edita el catálogo. `ShoppingState.history` contiene estos eventos, del más reciente al más antiguo.
+
+`PurchaseDialog.tsx` usa el elemento HTML nativo `dialog`. `showModal()` lo abre y mantiene el teclado dentro de la ventana. Un efecto lo cierra al desmontar el componente. Cancelar o presionar Escape solo cierra el formulario; confirmar valida antes de modificar datos. `PurchaseHistory.tsx` muestra los eventos usando sus identificadores como claves.
+
+Todavía no hay persistencia: pendientes e historial se reinician al recargar. Registrar una compra no calcula stock disponible en casa.

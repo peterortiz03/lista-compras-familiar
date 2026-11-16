@@ -19,8 +19,18 @@ export interface PendingItem {
 }
 
 export interface ShoppingState {
+  history: Purchase[]
   catalog: Product[]
   pending: PendingItem[]
+}
+
+export interface Purchase {
+  id: string
+  productId: string
+  name: string
+  unit: Unit
+  quantity: number
+  purchasedAt: string
 }
 
 export interface ProductDraft {

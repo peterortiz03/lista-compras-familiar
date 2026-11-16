@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { createInitialState } from '../src/data.ts'
-import { addProduct, quantityError, removePending, updateQuantity } from '../src/lib/shopping.ts'
+import { addProduct, quantityError, recordPurchase, removePending, updateQuantity } from '../src/lib/shopping.ts'
 
 test('agregar incorpora el producto al catálogo y a pendientes sin mutar el estado anterior', () => {
   const initial = createInitialState()
@@ -60,4 +60,35 @@ test('rechaza nombres vacíos o demasiado largos', () => {
   for (const name of ['   ', 'a'.repeat(81)]) {
     assert.throws(() => addProduct(createInitialState(), { name, quantity: 1, unit: 'unidad' }, 'nuevo'))
   }
+})
+
+test('compra parcial resta exactamente y agrega una instantánea al historial sin mutar el original', () => {
+  const initial = updateQuantity(createInitialState(), 'leche', 0.3)
+  const result = recordPurchase(initial, 'leche', 0.1, 'compra-1', '2026-11-16T20:00:00.000Z')
+  assert.equal(result.pending.find((item) => item.productId === 'leche')?.quantity, 0.2)
+  assert.deepEqual(result.history[0], { id: 'compra-1', productId: 'leche', name: 'Leche', unit: 'litro', quantity: 0.1, purchasedAt: '2026-11-16T20:00:00.000Z' })
+  assert.equal(initial.history.length, 0)
+  assert.equal(initial.pending[0].quantity, 0.3)
+})
+
+test('compra completa retira el pendiente y conserva historial al agregar, editar o eliminar otros', () => {
+  const initial = createInitialState()
+  const bought = recordPurchase(initial, 'huevos', 12, 'compra-1', '2026-11-16T20:00:00.000Z')
+  assert.equal(bought.pending.some((item) => item.productId === 'huevos'), false)
+  assert.equal(bought.catalog, initial.catalog)
+  const added = addProduct(bought, { name: 'Yerba', quantity: 1, unit: 'paquete' }, 'yerba').state
+  const edited = updateQuantity(added, 'yerba', 2)
+  const removed = removePending(edited, 'yerba')
+  assert.deepEqual(removed.history, bought.history)
+  const next = recordPurchase(removed, 'leche', 1, 'compra-2', '2026-11-16T21:00:00.000Z')
+  assert.deepEqual(next.history.map((purchase) => purchase.id), ['compra-2', 'compra-1'])
+})
+
+test('rechaza compras excesivas, inválidas o de productos que no están pendientes', () => {
+  const initial = createInitialState()
+  for (const amount of [0, -1, 13, 1.5, NaN]) {
+    assert.throws(() => recordPurchase(initial, 'huevos', amount, 'compra', '2026-11-16T20:00:00.000Z'))
+  }
+  assert.throws(() => recordPurchase(initial, 'cafe', 1, 'compra', '2026-11-16T20:00:00.000Z'))
+  assert.equal(initial.history.length, 0)
 })

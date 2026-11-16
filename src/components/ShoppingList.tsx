@@ -37,7 +37,7 @@ export function ShoppingList({ state, onEdit, onRemove, onBuy }: ShoppingListPro
         <ul className="divide-y divide-line" aria-label="Productos pendientes">
           {items.map(({ product, quantity }) => (
             <li key={product.id} className="group flex items-center gap-3 px-4 py-4 sm:gap-4 sm:px-6 sm:py-5">
-              <button className="buy-button" type="button" aria-label={`Marcar ${product.name} como comprado`} title="Marcar compra completa" onClick={() => onBuy(product)}><Icon name="check" size={19} /></button>
+              <button className="buy-button" type="button" aria-label={`Registrar compra de ${product.name}`} title="Registrar compra completa o parcial" onClick={() => onBuy(product)}><Icon name="check" size={19} /></button>
               <div className="min-w-0 flex-1">
                 <h3 className="break-words text-[15px] font-semibold sm:text-base">{product.name}</h3>
                 <p className="mt-1 text-xs text-muted">{UNITS.find((entry) => entry.value === product.unit)?.label}</p>
@@ -58,7 +58,7 @@ export function ShoppingList({ state, onEdit, onRemove, onBuy }: ShoppingListPro
           {query && <button type="button" className="button-secondary mx-auto mt-5" onClick={() => setQuery('')}>Limpiar búsqueda</button>}
         </div>
       )}
-      <div className="flex items-start gap-2 border-t border-line bg-[#fcfcf9] px-5 py-4 text-xs leading-relaxed text-muted sm:px-6"><Icon name="info" size={16} style={{ flexShrink: 0, marginTop: 1 }} /><p>Tocá el círculo para marcar una compra completa. Tocá la cantidad para editarla.</p></div>
+      <div className="flex items-start gap-2 border-t border-line bg-[#fcfcf9] px-5 py-4 text-xs leading-relaxed text-muted sm:px-6"><Icon name="info" size={16} style={{ flexShrink: 0, marginTop: 1 }} /><p>Tocá el círculo para registrar una compra completa o parcial. Tocá la cantidad para editarla.</p></div>
     </section>
   )
 }

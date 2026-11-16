@@ -1,5 +1,17 @@
 # Decisiones del proyecto
 
+## Entrega 2: compras parciales e historial
+
+- La compra ahora se confirma en una ventana nativa, indicando una cantidad positiva hasta el total pendiente. Se puede cancelar con el botón o Escape.
+- `recordPurchase` reduce el pendiente y crea el registro en una única actualización. Las compras completas también generan historial; eliminar un pendiente no lo hace.
+- Restamos en milésimas enteras para evitar residuos de coma flotante.
+- El historial conserva nombre, unidad, cantidad, identificador y fecha ISO; se muestra con fecha y hora local, de más reciente a más antiguo.
+- Todo sigue en memoria y se pierde al recargar. Sin dependencias nuevas, cuentas, servicios ni despliegue.
+- Se agregaron tres pruebas de lógica: compra parcial decimal, compra completa y conservación del historial, y rechazo de compras inválidas. Ahora hay nueve pruebas.
+- Próximo paso sugerido: persistencia local, seguida de cuentas y acceso familiar con Supabase.
+
+Las decisiones de la primera entrega que siguen documentan la base inicial; la segunda entrega reemplaza el comportamiento de compra y agrega el historial.
+
 ## Entrega 1: lista local en memoria
 
 - **Alcance:** agregar, buscar, editar cantidades, eliminar pendientes y marcar compras completas. Sin compras parciales, historial, autenticación, persistencia, sincronización ni despliegue.

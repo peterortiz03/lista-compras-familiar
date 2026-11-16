@@ -39,6 +39,7 @@ export function addProduct(state: ShoppingState, draft: ProductDraft, newId: str
     kind: 'added' as const,
     product,
     state: {
+      ...state,
       catalog: existing ? state.catalog : [...state.catalog, product],
       pending: [...state.pending, { productId: product.id, quantity: draft.quantity }],
     },
@@ -58,7 +59,25 @@ export function updateQuantity(state: ShoppingState, productId: string, quantity
   }
 }
 
-// Comprar y quitar retiran el pendiente; el producto permanece en el catálogo.
+// Eliminar un pendiente no es una compra y no genera historial.
 export function removePending(state: ShoppingState, productId: string): ShoppingState {
   return { ...state, pending: state.pending.filter((item) => item.productId !== productId) }
+}
+
+export function recordPurchase(state: ShoppingState, productId: string, quantity: number, id: string, purchasedAt: string): ShoppingState {
+  const product = state.catalog.find((entry) => entry.id === productId)
+  const pending = state.pending.find((entry) => entry.productId === productId)
+  if (!product || !pending) throw new Error('Este producto ya no está pendiente.')
+  const error = quantityError(quantity, product.unit)
+  if (error) throw new Error(error)
+  // Trabajamos en milésimas para evitar restos como 0.19999999999999998.
+  const remaining = Math.round(pending.quantity * 1000) - Math.round(quantity * 1000)
+  if (remaining < 0) throw new Error('La compra no puede superar la cantidad pendiente.')
+  return {
+    ...state,
+    pending: remaining === 0
+      ? state.pending.filter((entry) => entry.productId !== productId)
+      : state.pending.map((entry) => entry.productId === productId ? { ...entry, quantity: remaining / 1000 } : entry),
+    history: [{ id, productId, name: product.name, unit: product.unit, quantity, purchasedAt }, ...state.history],
+  }
 }

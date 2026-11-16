@@ -2,6 +2,7 @@ import type { ShoppingState } from './types.ts'
 
 export function createInitialState(): ShoppingState {
   return {
+    history: [],
     catalog: [
       { id: 'leche', name: 'Leche', unit: 'litro' },
       { id: 'huevos', name: 'Huevos', unit: 'unidad' },
