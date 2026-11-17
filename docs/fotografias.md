@@ -1,6 +1,6 @@
 # Fotografías del catálogo
 
-La función está implementada en `feat/fotos-catalogo`. **No está activada en producción.** La autorización de commits y subida de esta rama no se interpreta como autorización para cambiar Storage o ejecutar SQL en producción. El despliegue automático de esta rama está deshabilitado en `vercel.json`; main conserva su funcionamiento. No se hicieron cambios remotos en Supabase.
+La configuración de producción está completa, con autorización del usuario tras iniciar sesión en Supabase CLI. Se comprobó que 0006 ya estaba aplicada y no se repitió. Se desplegó `cleanup-product-photos` con Verify JWT desactivado y validación propia de secreto, se configuraron Vault, pg_cron y pg_net y se programó la limpieza cada 15 minutos. La llamada sin secreto devolvió 401; con secreto, 200. La llamada desde PostgreSQL usando Vault también devolvió 200 sin fallos. No se crearon productos o cuentas de prueba en producción. Los pasos siguientes quedan como referencia para instalaciones nuevas: no hay que repetirlos en el proyecto actual.
 
 ## Qué cambia
 
@@ -50,7 +50,7 @@ En **Edge Functions → Secrets**, agregá `PHOTO_CLEANUP_SECRET`: generá un va
 
 No lo envíes al chat, no lo subas a Git ni lo pongas en Vercel o variables `VITE_`. La función usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`, disponibles en el entorno de Edge Functions; la clave privilegiada permanece en el servidor. No se configura una clave de servicio en el frontend.
 
-Guardá/desplegá la función. No cambies ajustes de otras funciones. Alternativa si ya usás Supabase CLI autenticada: `supabase functions deploy cleanup-product-photos --project-ref TU_REFERENCIA --no-verify-jwt`; el secreto se configura igualmente desde el panel.
+Guardá/desplegá la función. No cambies ajustes de otras funciones. Alternativa si ya usás Supabase CLI autenticada: `supabase functions deploy cleanup-product-photos --remote=TU_REFERENCIA --no-verify-jwt --use-api`; el secreto se configura igualmente desde el panel.
 
 ### 3. Programar limpieza cada 15 minutos
 
@@ -73,7 +73,7 @@ Si falla, los trabajos permanecen registrados para reintento. No borres filas de
 
 Con las tres configuraciones anteriores listas, ejecutá `npm.cmd run dev` en la rama de fotos, usando tu `.env.local` habitual. No hace falta agregar variables de frontend. **Las pruebas locales contra ese proyecto también escriben en los datos familiares reales**: elegí un producto de prueba sin alterar compras existentes.
 
-Una vez verificadas las pruebas siguientes, autorizá integrar la rama en main y publicar. El push a main activará Vercel normalmente; no hace falta crear otro proyecto ni volver a configurar Auth. La regla de Vercel deshabilita únicamente `feat/fotos-catalogo`, según [su configuración de despliegues por rama](https://vercel.com/docs/project-configuration/git-configuration#gitdeploymentenabled).
+La integración en main y publicación fueron autorizadas al delegar los pasos restantes. Para futuras instalaciones, verificá los pasos siguientes antes de publicar. El push a main activará Vercel normalmente; no hace falta crear otro proyecto ni volver a configurar Auth. La regla de Vercel deshabilita únicamente `feat/fotos-catalogo`, según [su configuración de despliegues por rama](https://vercel.com/docs/project-configuration/git-configuration#gitdeploymentenabled).
 
 ## Pruebas desde PC y teléfono
 
@@ -100,4 +100,4 @@ Las URLs firmadas duran **60 segundos**; se reutilizan en memoria hasta 40 segun
 - Migraciones 0001–0006 y suites SQL ejecutadas en PostgreSQL temporal, con esquema Storage simulado. Se probaron aislamiento, revocación, una política permisiva adicional, revisiones, reemplazo fallido, idempotencia, vencimiento y limpieza tardía.
 - Chrome local con API de Storage simulada y PostgreSQL temporal: crear/reemplazar/quitar, miniatura en pendientes, EXIF, compresión, modo local y anchos 320/390/1440 sin desbordes ni excepciones JS.
 - Función comprobada con Deno y API simulada: rechaza llamadas sin secreto y procesa cola, API de borrado y confirmación con credencial solo de servidor.
-- No se probaron la cámara física de iPhone/Android ni los servicios reales de producción. Esas comprobaciones y la activación quedan para después de tu autorización/configuración. Storage, egress y funciones consumen las cuotas de tu plan; no se contrataron servicios ni planes nuevos.
+- La función y su llamada desde PostgreSQL se verificaron en producción. Quedan las pruebas con cámara física de iPhone/Android y carga de fotos con cuentas reales; no se alteraron productos familiares para simularlas. Storage, egress y funciones consumen las cuotas de tu plan; no se contrataron servicios ni planes nuevos.

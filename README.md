@@ -1,6 +1,6 @@
 # Lista de Compras Familiar
 
-**Fotografías del catálogo preparadas:** implementación y pruebas en `feat/fotos-catalogo`, sin cambios en producción. Para activarlas faltan aprobar/aplicar 0006, configurar la función y el trabajo de limpieza e integrar la rama. Seguí [la guía de fotografías](docs/fotografias.md); no repitas 0001–0005. Esta rama no dispara despliegues de Vercel.
+**Fotografías del catálogo:** Storage privado y migración 0006 configurados. Función de limpieza desplegada con secreto exclusivo y Cron cada 15 minutos, verificado con respuesta HTTP 200. La función forma parte de esta versión; ver [uso y configuración](docs/fotografias.md). No repitas las migraciones.
 
 **Actualización A–D:** categorías, notas, autoría, urgencia, favoritos, sugerencias, compartir, administración familiar, acceso persistente y PWA. El usuario confirmó la ejecución de 0004 y 0005 y autorizó la publicación. Ver [efectos y verificaciones](docs/etapas-bcd.md).
 

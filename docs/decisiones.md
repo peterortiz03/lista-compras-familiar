@@ -8,7 +8,7 @@
 - Storage no participa en una transacción distribuida. Un registro persistente y una función programada retiran archivos descartados o abandonados por API, con reintentos; no se borran objetos por SQL. Conservar registros limpiados permite detectar cargas que llegan tarde. Añadir esta pequeña función responde al cierre del navegador durante una carga.
 - URLs firmadas por 60 segundos, caché solo en memoria y renovación de filas visibles. La revocación bloquea nuevas firmas, pero un enlace ya emitido puede durar hasta su vencimiento. No hay caché offline de fotos ni claves de servicio en React.
 - Miniaturas de 48 px y fallback vectorial por categoría; sin cambios en sugerencias ni historial. El catálogo se carga al abrir su pestaña para contener el tamaño inicial de JavaScript.
-- Nueva migración 0006; no se modificaron las históricas. Código y SQL probados localmente; producción pendiente de autorización y configuración descrita en [fotografias.md](fotografias.md). Commits y push autorizados por el pedido actual; rama de fotos con despliegues deshabilitados para respetar el límite sobre producción.
+- Nueva migración 0006; no se modificaron las históricas. Código y SQL probados localmente. El usuario luego autorizó completar la configuración: 0006 ya estaba aplicada; función, Vault y Cron configurados y verificados con HTTP 200. Ver [fotografias.md](fotografias.md). Commits y push autorizados por el pedido actual; rama de fotos con despliegues deshabilitados para respetar el límite sobre producción.
 
 ## B–D: 0005 aplicada y publicación autorizada
 
