@@ -1,5 +1,15 @@
 # Decisiones del proyecto
 
+## Fotografías opcionales del catálogo
+
+- Una referencia por producto familiar; no pertenece al pendiente ni al historial. Solo se administra en Catálogo. El modo local no procesa ni solicita imágenes; tampoco se importan referencias de otra familia.
+- Bucket privado `product-photos`, WebP de hasta 256 KiB. El navegador admite JPG/PNG/WebP hasta 12 MiB, aplica EXIF y reduce el lado mayor a 512 px. Sin bibliotecas adicionales, imágenes predeterminadas ni servicios de IA. HEIC requiere exportación a JPG.
+- Rutas inmutables emitidas por SQL, con familia/producto/carga aleatoria. Se valida membresía tras el bloqueo, revisión, pertenencia y carga antes de confirmar producto/foto en una transacción. Nunca se sobrescribe el archivo vigente.
+- Storage no participa en una transacción distribuida. Un registro persistente y una función programada retiran archivos descartados o abandonados por API, con reintentos; no se borran objetos por SQL. Conservar registros limpiados permite detectar cargas que llegan tarde. Añadir esta pequeña función responde al cierre del navegador durante una carga.
+- URLs firmadas por 60 segundos, caché solo en memoria y renovación de filas visibles. La revocación bloquea nuevas firmas, pero un enlace ya emitido puede durar hasta su vencimiento. No hay caché offline de fotos ni claves de servicio en React.
+- Miniaturas de 48 px y fallback vectorial por categoría; sin cambios en sugerencias ni historial. El catálogo se carga al abrir su pestaña para contener el tamaño inicial de JavaScript.
+- Nueva migración 0006; no se modificaron las históricas. Código y SQL probados localmente; producción pendiente de autorización y configuración descrita en [fotografias.md](fotografias.md). Commits y push autorizados por el pedido actual; rama de fotos con despliegues deshabilitados para respetar el límite sobre producción.
+
 ## B–D: 0005 aplicada y publicación autorizada
 
 - Favoritos explícitos compartidos; frecuencia y recencia se calculan con historial no revertido y fechas de pendientes. La lista de sugerencias es única y limitada a cinco; no se confunden estadísticas con estrellas elegidas manualmente.

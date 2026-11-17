@@ -1,5 +1,7 @@
 # Lista de Compras Familiar
 
+**Fotografías del catálogo preparadas:** implementación y pruebas en `feat/fotos-catalogo`, sin cambios en producción. Para activarlas faltan aprobar/aplicar 0006, configurar la función y el trabajo de limpieza e integrar la rama. Seguí [la guía de fotografías](docs/fotografias.md); no repitas 0001–0005. Esta rama no dispara despliegues de Vercel.
+
 **Actualización A–D:** categorías, notas, autoría, urgencia, favoritos, sugerencias, compartir, administración familiar, acceso persistente y PWA. El usuario confirmó la ejecución de 0004 y 0005 y autorizó la publicación. Ver [efectos y verificaciones](docs/etapas-bcd.md).
 
 **En casa** organiza las compras del hogar con React, TypeScript, Vite, Tailwind CSS y Supabase. La aplicación incluye lista familiar compartida, catálogo administrable y compras completas o parciales con historial y reversión.
@@ -8,6 +10,7 @@
 
 - Node.js 22.18 o superior compatible con Vite, preferentemente LTS vigente; npm y un navegador moderno.
 - Para compartir con este código: un proyecto Supabase con 0001–0005 aplicadas y `.env.local` configurado. El usuario confirmó todas las migraciones en el proyecto actual; sin Supabase se puede usar la copia local.
+- Para fotos familiares: 0006 y Storage privado con limpieza programada, según [fotografias.md](docs/fotografias.md). No hay variables nuevas de frontend ni fotos en modo local. Sin 0006 el catálogo anterior sigue operativo.
 
 Desde PowerShell:
 

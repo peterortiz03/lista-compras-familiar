@@ -245,3 +245,19 @@ Una membresía actual no debe ser necesaria para representar una compra antigua.
 Un manifiesto web es un archivo JSON que describe cómo se presenta la aplicación instalada: nombre, íconos, colores, dirección inicial y tipo de ventana. No guarda usuarios ni datos de compras. `manifest.webmanifest` y los PNG derivados del logo permiten la instalación en navegadores compatibles. `InstallApp` escucha el evento opcional de instalación; si no existe, se usa el menú del navegador. No añadimos service worker ni almacenamiento offline de las respuestas familiares.
 
 Las instrucciones de migración y aceptación están en [etapas-bcd.md](etapas-bcd.md). La implementación está preparada localmente; la nueva migración y la publicación requieren autorización. La intención de listas especiales sigue registrada como un apartado futuro separado de la lista principal.
+
+## 18. Una fotografía compartida por producto
+
+**PostgreSQL y Storage tienen tareas diferentes.** PostgreSQL organiza filas relacionadas: productos, familias y pendientes. Storage guarda archivos y devuelve sus bytes al descargarlos. La columna `photo_path` contiene una ruta, no una imagen ni una URL pública. Así un producto sigue siendo pequeño y su foto puede cambiar sin modificar cada pendiente que lo menciona.
+
+El recorrido empieza en `CatalogPhotoField`: un input nativo permite elegir archivo o pedir la cámara. `photo-rules.ts` valida formato/tamaño y calcula dimensiones. `product-photos.ts` usa el decodificador del navegador y un canvas para orientar, reducir y comprimir. La vista previa es una URL temporal del navegador, que se libera al cambiar o cerrar el formulario; todavía no se subió nada.
+
+Al guardar, SQL reserva una ruta para esa familia y producto. El navegador sube únicamente el WebP reducido. Después `catalog_save_photo` confirma producto y referencia en una transacción. Es parecido a preparar un recurso y luego confirmar una operación cliente-servidor: si la carga falla, el producto y la foto anterior siguen como estaban. Las revisiones existentes evitan pisar otra edición, y el identificador de solicitud evita repetir una operación cuya respuesta se perdió.
+
+**Los permisos viven en el servidor.** Las políticas de Storage comprueban membresía y registro de la ruta, no solo el nombre de la carpeta. Una foto activa no puede sobrescribirse ni borrarse directamente. Al reemplazarla se sube otro archivo, se confirma su referencia y recién entonces se permite limpiar la anterior. La función de limpieza también procesa cargas abandonadas, aunque el navegador se cierre. Guarda los reintentos en PostgreSQL y elimina los archivos usando la API de Storage; no alcanza con borrar una fila de metadata por SQL.
+
+`ProductThumbnail` pide una URL firmada cuando la fila entra en pantalla. Es un permiso temporal para descargar esa foto: dura un minuto y se renueva para las filas visibles. Se mantiene en memoria, sin guardarlo en el catálogo ni en localStorage. Al cambiar familia se descarta ese espacio de trabajo. Un enlace ya emitido puede seguir funcionando hasta vencer, por eso no debe compartirse.
+
+Las imágenes originales del celular pueden tener miles de píxeles y varios megabytes. La miniatura necesita unos 48 px; reducir el archivo a un lado máximo de 512 px y hasta 256 KiB evita descargar el original cada vez. CSS usa `object-fit: cover` para llenar el cuadrado sin estirar. Si la imagen falta, se muestra el ícono de categoría y el nombre sigue disponible. El historial conserva sus datos anteriores y el modo local no usa este circuito.
+
+El catálogo se importa con `lazy` al abrir su pestaña; `Suspense` muestra un texto mientras llega ese archivo JavaScript. No se añadió otra biblioteca. La configuración, archivos y pruebas se describen en [fotografias.md](fotografias.md).
