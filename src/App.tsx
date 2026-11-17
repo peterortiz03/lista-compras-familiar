@@ -21,7 +21,7 @@ export default function App() {
         <AccountPanel onFamilyChange={setFamily} />
       </details>
       <div id="contenido"><ShoppingWorkspace key={family ? `${family.userId}:${family.id}` : 'local'} family={family} /></div>
-      <footer className="mt-10 border-t border-line pt-5 text-xs text-muted">Quinta entrega · Lista familiar compartida</footer>
+      <footer className="mt-10 border-t border-line pt-5 text-xs text-muted">En casa · Lista familiar compartida</footer>
     </main>
   </div>
 }

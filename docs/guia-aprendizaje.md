@@ -203,3 +203,19 @@ También hay un identificador por solicitud. Si el servidor guardó una compra p
 Los archivos principales nuevos son `src/hooks/useShoppingData.ts`, `src/components/ShoppingWorkspace.tsx`, `src/lib/shared-shopping.ts`, la migración `0002_shared_shopping.sql` y sus pruebas SQL. `shared-shopping.ts` valida respuestas y prepara los datos de importación. Los tipos ayudan al compilar; los validadores protegen al recibir información real.
 
 El [recorrido de sincronización](sincronizacion.md) explica cómo probarlo con dos cuentas y qué hacer ante conflictos. Las secciones anteriores describen las etapas históricas: desde esta entrega, la lista familiar sí se guarda en Supabase y la copia local queda independiente. Referencia para las llamadas: [funciones RPC de Supabase](https://supabase.com/docs/reference/javascript/rpc).
+
+## 15. Catálogo y reversión (sexta entrega)
+
+Ahora una navegación con botones muestra Lista, Catálogo o Historial mediante un estado `view`. No son tres aplicaciones ni tres rutas de servidor: React muestra el componente correspondiente dentro de `ShoppingWorkspace`. `CatalogPanel` conserva sus campos de edición y filtro; la lógica de escritura sigue pasando por `useShoppingData`.
+
+Quitar un producto no lo elimina físicamente: cambia `active` a falso. Esto se llama archivado o borrado lógico. Las referencias del historial siguen apuntando a un producto existente y podemos recuperarlo. Las sugerencias filtran solo los activos, mientras los pendientes muestran también los productos archivados que todavía hacen falta comprar.
+
+Al renombrar un producto, las filas pendientes muestran el nombre nuevo; las compras conservan el nombre original porque guardaban una instantánea. La unidad queda fija. Cada cambio de catálogo reemplaza una revisión UUID; si otro integrante modificó el mismo producto, una edición vieja se rechaza como ocurría con las cantidades.
+
+Revertir representa una corrección de negocio, no borrar una fila. En una transacción, el servidor valida el permiso, devuelve la cantidad a pendientes y marca la compra con `reverted_at` y `reverted_by`. Si ya estaba revertida, no suma nada otra vez. El historial habitual filtra las revertidas, pero una casilla permite inspeccionarlas.
+
+El permiso compara la identidad de la sesión con el autor de la compra o el responsable familiar. La interfaz oculta el botón cuando no corresponde y la función SQL vuelve a verificarlo: esconder un botón por sí solo no protege datos.
+
+`src/lib/shopping.ts` incorpora las mismas reglas para el modo local. Las propiedades nuevas son opcionales en los tipos locales para leer copias anteriores sin borrarlas; al recibir una instantánea de Supabase exigimos su versión de esquema nueva. La migración 0003 añade columnas y adapta la API sin destruir los datos existentes.
+
+`vercel.json` describe cómo construir la aplicación y dónde encontrar sus archivos. Vercel alojará esos archivos; Supabase seguirá guardando usuarios y datos. Por eso publicar una versión nueva de React no equivale a reiniciar la base de datos. Los cambios SQL requieren una migración aparte. La guía [publicar-vercel.md](publicar-vercel.md) explica el primer despliegue y las actualizaciones posteriores desde GitHub.

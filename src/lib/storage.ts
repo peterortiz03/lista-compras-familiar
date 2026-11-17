@@ -27,6 +27,7 @@ export function isShoppingState(value: unknown): value is ShoppingState {
   const names = new Set<string>()
   for (const product of value.catalog) {
     if (!object(product) || !text(product.id) || !text(product.name) || !unit(product.unit)) return false
+    if (product.active !== undefined && typeof product.active !== 'boolean') return false
     const name = cleanName(product.name)
     if (!name || name.length > 80 || products.has(product.id) || names.has(normalizeName(name))) return false
     products.set(product.id, product.unit)
@@ -44,6 +45,7 @@ export function isShoppingState(value: unknown): value is ShoppingState {
     if (!object(purchase) || !text(purchase.id) || purchaseIds.has(purchase.id) || !text(purchase.productId) || !products.has(purchase.productId)) return false
     if (!text(purchase.name) || !cleanName(purchase.name) || purchase.name.length > 80 || !unit(purchase.unit) || !validQuantity(purchase.quantity, purchase.unit)) return false
     if (!text(purchase.purchasedAt) || !Number.isFinite(Date.parse(purchase.purchasedAt))) return false
+    if (purchase.revertedAt != null && (!text(purchase.revertedAt) || !Number.isFinite(Date.parse(purchase.revertedAt)))) return false
     purchaseIds.add(purchase.id)
   }
   return true

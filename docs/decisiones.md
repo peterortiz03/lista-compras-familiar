@@ -1,5 +1,20 @@
 # Decisiones del proyecto
 
+## Entrega 6: catálogo, corrección de compras y preparación de publicación
+
+- Las vistas Lista, Catálogo e Historial separan las tareas sin router ni dependencias nuevas. Catálogo significa productos conocidos; no representa stock disponible.
+- Todos los integrantes pueden crear, renombrar, quitar y recuperar productos. Crear no agrega un pendiente. Se conserva la unidad elegida originalmente para evitar conversiones ambiguas en referencias existentes.
+- Quitar es un archivado reversible (`active = false`). Retira el producto de las sugerencias, conservando pendientes e historial. Un nombre archivado sigue reservado: se puede recuperar, no duplicar. Volver a agregar explícitamente un faltante con ese nombre también lo reactiva.
+- Los cambios de catálogo usan una revisión UUID para rechazar ediciones obsoletas. La importación conserva el estado activo/inactivo de los productos locales.
+- Revertir una compra devuelve su cantidad al pendiente actual, o lo recrea si no existe. No supera 9999 ni convierte unidades. Se marca fecha y autor de reversión, y se oculta del historial habitual; el registro queda consultable. Repetir la reversión no vuelve a sumar.
+- Cada integrante puede revertir sus compras; la persona responsable puede revertir cualquiera de su familia. Se controla tanto en interfaz como en PostgreSQL. No hay borrado irreversible ni edición arbitraria del historial.
+- La migración 0003 conserva las operaciones anteriores como función privada sin permiso de ejecución para usuarios, y añade un punto de entrada público controlado que mantiene bloqueos, validación e idempotencia. La lectura declara versión 3 para detectar una base aún sin actualizar.
+- Los archivos locales previos siguen siendo compatibles: `active` ausente significa activo y `revertedAt` ausente significa compra vigente. La lectura remota exige el esquema nuevo.
+- Se verificaron diecinueve pruebas Node, las tres migraciones y tres suites SQL, más el recorrido en Chrome con dos identidades simuladas y PostgreSQL temporal. Se revisaron autor, responsable, integrante no autorizado, otra familia, reversión completa/parcial, repetición y límites.
+- Se prepara Vercel mediante `vercel.json` y una guía con variables públicas, redirecciones Auth, pruebas y próximos despliegues. Como todavía no hay cuenta Vercel, no se crea ni se publica un proyecto. No se cambia ningún plan ni se contratan servicios. Los costos y límites se verificaron en documentación oficial al preparar la guía.
+
+
+
 ## Entrega 5: compras familiares compartidas
 
 - Se conserva la copia local y se agrega una lista remota por familia; nunca se mezclan automáticamente. La sesión y la familia seleccionan un componente nuevo con clave de usuario y familia para descartar datos y formularios del contexto anterior.

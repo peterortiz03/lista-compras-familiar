@@ -1,11 +1,11 @@
 # Lista de Compras Familiar
 
-**En casa** organiza las compras del hogar con React, TypeScript, Vite, Tailwind CSS y Supabase. La quinta entrega conecta la lista familiar: catálogo, pendientes, compras completas y parciales e historial con autor.
+**En casa** organiza las compras del hogar con React, TypeScript, Vite, Tailwind CSS y Supabase. La aplicación incluye lista familiar compartida, catálogo administrable y compras completas o parciales con historial y reversión.
 
 ## Requisitos y ejecución en Windows
 
 - Node.js 22.18 o superior compatible con Vite, preferentemente LTS vigente; npm y un navegador moderno.
-- Para compartir: un proyecto Supabase con las dos migraciones aplicadas y `.env.local` configurado. Sin Supabase se puede usar la copia local.
+- Para compartir: un proyecto Supabase con las tres migraciones aplicadas y `.env.local` configurado. Sin Supabase se puede usar la copia local.
 
 Desde PowerShell:
 
@@ -23,7 +23,9 @@ El servidor local debe seguir abierto para cargar la aplicación. Hasta publicar
 
 - Primera instalación: [cuentas y familias con Supabase](docs/configurar-supabase.md), incluida la migración 0001.
 - Si ya tenés cuentas: aplicá solo [0002_shared_shopping.sql](supabase/migrations/0002_shared_shopping.sql) en SQL Editor. No repitas 0001 ni borres tablas. Después reiniciá Vite.
+- Después aplicá [0003_catalog_and_purchase_reversal.sql](supabase/migrations/0003_catalog_and_purchase_reversal.sql) para catálogo e historial administrables. Ejecutá cada migración una sola vez.
 - [Guía de sincronización y recorrido con dos cuentas](docs/sincronizacion.md).
+- [Publicación paso a paso en Vercel, costos y actualizaciones](docs/publicar-vercel.md).
 
 La aplicación usa `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`. `.env.example` contiene los nombres; copiá y completá `.env.local`, excluido de Git. Nunca uses `service_role`, claves secretas ni la contraseña de PostgreSQL en el navegador.
 
@@ -32,7 +34,8 @@ La aplicación usa `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`. `.env.
 - Cada cuenta pertenece a una familia. El responsable puede generar una invitación de un uso y siete días de vigencia. Una nueva reemplaza la anterior.
 - Al ingresar se muestra la lista de esa familia. Sin sesión o sin familia cargada se muestra la copia local, con una etiqueta diferente.
 - Alta de productos, sugerencias, búsqueda, cantidades y unidades, prevención de duplicados, edición y eliminación de pendientes.
-- Compras parciales y completas con fecha, hora y autor en el historial. Eliminar no registra una compra.
+- Vistas Lista, Catálogo e Historial. Todos pueden crear productos sin agregarlos a pendientes, editar sus nombres, quitarlos de las sugerencias y recuperarlos. Se conserva su unidad original y no se lleva stock exacto.
+- Compras parciales y completas con fecha, hora y autor. Cada integrante puede revertir sus compras y el responsable familiar puede revertir cualquiera. Revertir devuelve la cantidad a pendientes, oculta la compra del historial habitual y la conserva en la vista de revertidas. Eliminar un pendiente no registra una compra.
 - Actualización automática aproximadamente cada tres segundos en pestañas visibles, al recuperar foco o conexión y después de guardar. Botón de actualización manual. No requiere Supabase Realtime.
 - Si otra persona cambia un pendiente mientras lo editás o comprás, se rechaza el formulario anterior para que revises la cantidad actualizada.
 - Las operaciones se confirman en el servidor y tienen identificadores para evitar repetir compras al reintentar. No hay escrituras sin conexión.
@@ -59,7 +62,7 @@ npm.cmd run lint
 npm.cmd test
 ```
 
-Son dieciséis casos de lógica con el ejecutor de Node. También hay pruebas transaccionales de permisos y compras en `supabase/tests/`, para SQL Editor como administrador, con `ROLLBACK` final. No se agregó un framework de pruebas ni dependencias nuevas en esta entrega.
+Son diecinueve casos de lógica con el ejecutor de Node. También hay pruebas transaccionales de permisos y compras en `supabase/tests/`, para SQL Editor como administrador, con `ROLLBACK` final. No se agregó un framework de pruebas ni dependencias nuevas en esta entrega.
 
 Se probaron las migraciones en PostgreSQL temporal y la interfaz con dos cuentas aisladas y un servidor local conectado a ese motor. La API real reconoce la función nueva y rechaza el acceso anónimo; el usuario confirmó la configuración de cuentas y la ejecución de 0002. Eso no equivale a haber accedido a sus sesiones ni probado compras reales en su proyecto.
 
@@ -67,8 +70,18 @@ Para abrir el build local: `npm.cmd run preview`, después de `build`. No public
 
 ## Próximos pasos y alcance
 
-Queda la revisión integral del MVP con cuentas reales y los ajustes que surjan, incluida recuperación de contraseña. Después, publicación y PWA. No se implementan precios, comercios, notificaciones, inventario exacto, códigos de barras ni tickets. El historial y el catálogo aún se recuperan completos; paginación y retención de solicitudes se revisarán si crece su volumen.
+La publicación queda preparada con `vercel.json` y su guía; requiere crear la cuenta Vercel, conectar GitHub y configurar las variables y URLs de Auth. No se publicó automáticamente. Después continuaremos probando con cuentas reales y ajustando lo necesario, incluida recuperación de contraseña y, en otra entrega, PWA. No se implementan precios, comercios, notificaciones, inventario exacto, códigos de barras ni tickets. El historial y el catálogo aún se recuperan completos; paginación y retención de solicitudes se revisarán si crece su volumen.
 
 - [Decisiones](docs/decisiones.md)
 - [Guía de aprendizaje](docs/guia-aprendizaje.md)
 - [Sincronización: reglas, límites y verificación](docs/sincronizacion.md)
+
+## Probar Catálogo y revertir compras
+
+1. En **Catálogo**, creá un producto y verificá que aparezca como sugerencia en **Lista**, sin generar un pendiente por sí solo.
+2. Editá el nombre. Quitalo: debe desaparecer de las sugerencias; sus pendientes e historial se conservan. Activá **Mostrar también productos quitados** y recuperalo.
+3. Registrá una compra parcial y, en **Historial**, elegí **Revertir compra**. Confirmá que la cantidad vuelva a pendientes y desaparezca de la vista habitual.
+4. Activá **Mostrar compras revertidas**: debe aparecer identificada como revertida, sin opción de revertir dos veces.
+5. Con otro integrante, comprobá que solo pueda revertir sus propias compras. El responsable puede revertir las de todos en su familia. Los permisos se verifican también en PostgreSQL.
+
+Se probaron las tres migraciones y sus suites SQL en PostgreSQL temporal, diecinueve pruebas Node y el recorrido de Catálogo/Historial en Chrome con dos cuentas y ese PostgreSQL. Crear, quitar, recuperar y renombrar sincronizó las sugerencias; revertir restableció cantidades y respetó permisos. Sin excepciones ni desbordes a 320, 390 y 1440 px. Las pruebas no modificaron compras reales.

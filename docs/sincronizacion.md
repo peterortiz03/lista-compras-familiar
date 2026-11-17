@@ -1,5 +1,7 @@
 # Lista familiar compartida — quinta entrega
 
+La entrega actual también incluye Catálogo e Historial como vistas independientes. Después de 0002 aplicá [0003_catalog_and_purchase_reversal.sql](../supabase/migrations/0003_catalog_and_purchase_reversal.sql) para administrar productos y revertir compras. La [guía de publicación](publicar-vercel.md) reúne los pasos actuales para Vercel. El recorrido de compras de este documento se mantiene; consultá los registros desde la vista **Historial**.
+
 ## Activación
 
 Si ya configuraste cuentas y familias con la guía anterior:

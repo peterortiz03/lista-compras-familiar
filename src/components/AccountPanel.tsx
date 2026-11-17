@@ -110,7 +110,7 @@ function FamilyPanel({ client, userId, onFamilyChange }: { client: SupabaseClien
         }
         if (active) {
           setFamily(result.data); setMembers(roster); setLoaded(true)
-          onFamilyChange(result.data ? { id: result.data.id, name: result.data.name, userId } : null)
+          onFamilyChange(result.data ? { id: result.data.id, name: result.data.name, userId, ownerId: result.data.owner_id } : null)
         }
       } catch { if (active) setError('No pudimos cargar tu familia. Revisá la conexión o la configuración de la base de datos.') }
     }

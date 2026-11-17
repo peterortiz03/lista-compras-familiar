@@ -27,8 +27,8 @@ export function ProductForm({ catalog, pendingIds, editing, onAdd, onSave, onEdi
   const focusAfterSave = useRef(false)
   const selected = catalog.find((product) => normalizeName(product.name) === normalizeName(name))
   const activeUnit = selected?.unit ?? unit
-  const suggestions = !editing && normalizeName(name)
-    ? catalog.filter((product) => normalizeName(product.name).includes(normalizeName(name))).slice(0, 5)
+  const suggestions = !editing
+    ? catalog.filter((product) => product.active !== false && normalizeName(product.name).includes(normalizeName(name))).slice(0, 5)
     : []
 
   useEffect(() => {

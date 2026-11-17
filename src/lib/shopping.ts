@@ -27,12 +27,14 @@ export function addProduct(state: ShoppingState, draft: ProductDraft, newId: str
   if (!name || name.length > 80) throw new Error('El nombre debe tener entre 1 y 80 caracteres.')
 
   const existing = state.catalog.find((product) => normalizeName(product.name) === normalizeName(name))
-  const product = existing ?? { id: newId, name, unit: draft.unit }
+  const product = existing?.active === false ? { ...existing, active: true } : existing ?? { id: newId, name, unit: draft.unit }
   const error = quantityError(draft.quantity, product.unit)
   if (error) throw new Error(error)
 
+  const catalog = existing?.active === false ? state.catalog.map(entry => entry.id === product.id ? product : entry) : state.catalog
+
   if (state.pending.some((item) => item.productId === product.id)) {
-    return { kind: 'duplicate' as const, state, product }
+    return { kind: 'duplicate' as const, state: catalog === state.catalog ? state : { ...state, catalog }, product }
   }
 
   return {
@@ -40,9 +42,45 @@ export function addProduct(state: ShoppingState, draft: ProductDraft, newId: str
     product,
     state: {
       ...state,
-      catalog: existing ? state.catalog : [...state.catalog, product],
+      catalog: existing ? catalog : [...catalog, product],
       pending: [...state.pending, { productId: product.id, quantity: draft.quantity }],
     },
+  }
+}
+
+export function createCatalogProduct(state: ShoppingState, name: string, unit: Unit, id: string): ShoppingState {
+  const clean = cleanName(name)
+  if (!clean || clean.length > 80) throw new Error('El nombre debe tener entre 1 y 80 caracteres.')
+  if (state.catalog.some(product => normalizeName(product.name) === normalizeName(clean))) throw new Error('Ya existe ese nombre. Revisá los productos quitados y recuperalo si corresponde.')
+  return { ...state, catalog: [...state.catalog, { id, name: clean, unit, active: true }] }
+}
+
+export function changeCatalogProduct(state: ShoppingState, productId: string, change: { name: string } | { active: boolean }): ShoppingState {
+  if (!state.catalog.some(product => product.id === productId)) throw new Error('Producto inexistente.')
+  if ('name' in change) {
+    const name = cleanName(change.name)
+    if (!name || name.length > 80) throw new Error('El nombre debe tener entre 1 y 80 caracteres.')
+    if (state.catalog.some(product => product.id !== productId && normalizeName(product.name) === normalizeName(name))) throw new Error('Ya existe ese nombre en el catálogo.')
+    change = { name }
+  }
+  return { ...state, catalog: state.catalog.map(product => product.id === productId ? { ...product, ...change } : product) }
+}
+
+export function revertPurchase(state: ShoppingState, purchaseId: string, date: string): ShoppingState {
+  const purchase = state.history.find(entry => entry.id === purchaseId)
+  if (!purchase) throw new Error('Compra inexistente.')
+  if (purchase.revertedAt) return state
+  const product = state.catalog.find(entry => entry.id === purchase.productId)
+  if (!product || product.unit !== purchase.unit) throw new Error('El producto o su unidad original no está disponible.')
+  const pending = state.pending.find(entry => entry.productId === purchase.productId)
+  const quantity = Math.round(((pending?.quantity ?? 0) + purchase.quantity) * 1000) / 1000
+  const error = quantityError(quantity, purchase.unit)
+  if (error) throw new Error(error)
+  return {
+    ...state,
+    pending: pending ? state.pending.map(entry => entry.productId === purchase.productId ? { ...entry, quantity } : entry)
+      : [...state.pending, { productId: purchase.productId, quantity }],
+    history: state.history.map(entry => entry.id === purchaseId ? { ...entry, revertedAt: date } : entry),
   }
 }
 

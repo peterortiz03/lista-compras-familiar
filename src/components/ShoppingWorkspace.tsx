@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import type { FamilyContext, Product, ProductDraft } from '../types.ts'
+import type { FamilyContext, Product, ProductDraft, Purchase } from '../types.ts'
+import type { ShoppingCommand } from '../lib/shared-shopping.ts'
 import { useShoppingData } from '../hooks/useShoppingData.ts'
 import { loadState } from '../lib/storage.ts'
 import { importProducts } from '../lib/shared-shopping.ts'
@@ -8,6 +9,7 @@ import { ShoppingList } from './ShoppingList.tsx'
 import { PurchaseDialog } from './PurchaseDialog.tsx'
 import { PurchaseHistory } from './PurchaseHistory.tsx'
 import { Icon } from './Icon.tsx'
+import { CatalogPanel } from './CatalogPanel.tsx'
 
 interface Selection { product: Product; quantity: number; version?: string }
 
@@ -17,6 +19,7 @@ export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) 
   const [buying, setBuying] = useState<Selection | null>(null)
   const [notice, setNotice] = useState('')
   const [operationError, setOperationError] = useState('')
+  const [view, setView] = useState<'list' | 'catalog' | 'history'>('list')
 
   function select(product: Product): Selection | null {
     const item = state.pending.find(entry => entry.productId === product.id)
@@ -51,6 +54,14 @@ export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) 
     if (editing?.product.id === buying.product.id) setEditing(null)
     setBuying(null); setNotice('Compra registrada. El historial y los pendientes se actualizaron.'); setOperationError('')
   }
+  async function handleRevert(purchase: Purchase) {
+    if (!window.confirm(`¿Revertir la compra de ${purchase.name}? Se devolverán ${purchase.quantity.toLocaleString('es-AR')} ${purchase.unit} a pendientes y saldrá del historial habitual.`)) return
+    try {
+      await mutate({ type: 'revert_purchase', purchaseId: purchase.id })
+      setNotice('Compra revertida. La cantidad volvió a pendientes.'); setOperationError('')
+    } catch (failure) { setOperationError(failure instanceof Error ? failure.message : 'No se pudo revertir la compra.') }
+  }
+  async function catalogAction(command: ShoppingCommand) { await mutate(command) }
   async function handleImport() {
     const local = loadState(() => window.localStorage)
     if (!local.canSave) { setOperationError('No se pudo leer la lista local. La copia original se conserva.'); return }
@@ -71,17 +82,18 @@ export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) 
     {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-4 text-sm text-red-800">{error}{family && ' Se mantienen los últimos datos confirmados; las operaciones quedan deshabilitadas hasta recuperar la conexión.'}</p>}
     {operationError && <p role="alert" className="mb-4 text-sm text-red-800">{operationError}</p>}
     <p role="status" aria-live="polite" className={notice ? 'mb-4 rounded-xl bg-sage p-3 text-sm text-forest' : 'sr-only'}>{notice}</p>
-    <a href="#agregar-producto" className="button-primary mb-5" onClick={event => { if (disabled) event.preventDefault(); else setEditing(null) }} aria-disabled={disabled}><Icon name="plus" size={18} />Agregar producto</a>
+    <nav aria-label="Secciones de compras" className="mb-5 flex flex-wrap gap-3">{([{ id: 'list', label: 'Lista' }, { id: 'catalog', label: 'Catálogo' }, { id: 'history', label: 'Historial' }] as const).map(entry => <button key={entry.id} className={view === entry.id ? 'button-primary' : 'button-secondary'} type="button" aria-pressed={view === entry.id} onClick={() => { setView(entry.id); setEditing(null); setOperationError('') }}>{entry.label}</button>)}</nav>
+    {view === 'list' && <a href="#agregar-producto" className="button-primary mb-5" onClick={event => { if (disabled) event.preventDefault(); else setEditing(null) }} aria-disabled={disabled}><Icon name="plus" size={18} />Agregar faltante</a>}
     {family && ready && state.catalog.length === 0 && <div className="surface mb-5 p-4"><p className="text-sm text-muted">La familia empieza vacía. Podés agregar productos o copiar el catálogo y los pendientes locales. El historial anterior queda en este navegador.</p><button className="button-secondary mt-3" disabled={disabled} onClick={handleImport}>Importar catálogo y pendientes locales</button></div>}
     <div className="mb-6 grid grid-cols-2 gap-3">
       <div className="stat-card"><div><p className="text-xs text-muted">Productos pendientes</p><p className="mt-1 text-3xl font-bold">{state.pending.length}</p></div><Icon name="basket" /></div>
-      <div className="stat-card"><div><p className="text-xs text-muted">En tu catálogo</p><p className="mt-1 text-3xl font-bold">{state.catalog.length}</p></div><Icon name="leaf" /></div>
+      <div className="stat-card"><div><p className="text-xs text-muted">En tu catálogo</p><p className="mt-1 text-3xl font-bold">{state.catalog.filter(product => product.active !== false).length}</p></div><Icon name="leaf" /></div>
     </div>
     <fieldset disabled={disabled} className="min-w-0">
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="min-w-0"><ShoppingList state={state} onEdit={handleEdit} onRemove={handleRemove} onBuy={product => setBuying(select(product))} /><PurchaseHistory history={state.history} shared={!!family} /></div>
+      {view === 'catalog' ? <CatalogPanel products={state.catalog} onAction={catalogAction} /> : view === 'history' ? <PurchaseHistory history={state.history} family={family} onRevert={handleRevert} /> : <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0"><ShoppingList state={state} onEdit={handleEdit} onRemove={handleRemove} onBuy={product => setBuying(select(product))} /></div>
         <div className="min-w-0 lg:sticky lg:top-6"><ProductForm key={editing?.product.id ?? 'new'} catalog={state.catalog} pendingIds={state.pending.map(item => item.productId)} editing={editing} onAdd={handleAdd} onSave={handleSave} onEdit={handleEdit} onCancel={() => setEditing(null)} /></div>
-      </div>
+      </div>}
     </fieldset>
     {buying && <PurchaseDialog product={buying.product} pending={buying.quantity} onSave={handlePurchase} onCancel={() => setBuying(null)} />}
   </section>

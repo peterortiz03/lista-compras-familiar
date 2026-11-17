@@ -8,6 +8,8 @@ export const UNITS = [
 export type Unit = (typeof UNITS)[number]['value']
 
 export interface Product {
+  active?: boolean
+  revision?: string
   id: string
   name: string
   unit: Unit
@@ -26,6 +28,8 @@ export interface ShoppingState {
 }
 
 export interface Purchase {
+  revertedAt?: string | null
+  revertedBy?: string | null
   purchasedBy?: string
   author?: string
   id: string
@@ -37,6 +41,7 @@ export interface Purchase {
 }
 
 export interface FamilyContext {
+  ownerId?: string
   userId: string
   id: string
   name: string

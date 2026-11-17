@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FamilyContext, ShoppingState } from '../types.ts'
 import { loadState, saveState } from '../lib/storage.ts'
-import { addProduct, recordPurchase, removePending, updateQuantity } from '../lib/shopping.ts'
+import { addProduct, changeCatalogProduct, createCatalogProduct, recordPurchase, removePending, revertPurchase, updateQuantity } from '../lib/shopping.ts'
 import { parseMutationResult, parseSharedState, sharedError } from '../lib/shared-shopping.ts'
 import type { MutationResult, ShoppingCommand } from '../lib/shared-shopping.ts'
 import { supabase } from '../lib/supabase.ts'
@@ -90,6 +90,11 @@ export function useShoppingData(family: FamilyContext | null) {
         case 'update': setState(updateQuantity(state, command.productId, command.quantity)); break
         case 'remove': setState(removePending(state, command.productId)); break
         case 'buy': setState(recordPurchase(state, command.productId, command.quantity, crypto.randomUUID(), new Date().toISOString())); break
+        case 'catalog_add': setState(createCatalogProduct(state, command.name, command.unit, crypto.randomUUID())); break
+        case 'catalog_update': setState(changeCatalogProduct(state, command.productId, { name: command.name })); break
+        case 'catalog_archive': setState(changeCatalogProduct(state, command.productId, { active: false })); break
+        case 'catalog_restore': setState(changeCatalogProduct(state, command.productId, { active: true })); break
+        case 'revert_purchase': setState(revertPurchase(state, command.purchaseId, new Date().toISOString())); break
         default: throw new Error('La importación requiere una familia conectada.')
       }
       return { kind: 'ok' }
