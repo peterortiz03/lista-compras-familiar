@@ -5,8 +5,8 @@ const dateFormat = new Intl.DateTimeFormat('es-AR', { dateStyle: 'short', timeSt
 
 export function PurchaseHistory({ history }: { history: Purchase[] }) {
   return <section className="surface mt-6 p-5 sm:p-6" aria-labelledby="history-title">
-    <h2 id="history-title" className="text-xl font-bold">Compras de esta sesión</h2>
-    <p className="mt-2 text-sm text-muted">Las más recientes primero. Este historial también se pierde al recargar.</p>
+    <h2 id="history-title" className="text-xl font-bold">Historial de compras</h2>
+    <p className="mt-2 text-sm text-muted">Las más recientes primero. Se guarda en este navegador junto con tu lista.</p>
     {history.length === 0 ? <p className="mt-5 text-sm text-muted">Todavía no registraste compras.</p> :
       <ul className="mt-4 divide-y divide-line" aria-label="Historial de compras">
         {history.map((purchase) => <li key={purchase.id} className="flex flex-wrap items-center justify-between gap-2 py-4">

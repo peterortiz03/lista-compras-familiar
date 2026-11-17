@@ -1,10 +1,10 @@
-# Cómo funciona la aplicación — Entrega 2
+# Cómo funciona la aplicación — Entrega 3
 
 ## 1. Qué corre y dónde
 
 Cuando ejecutás `npm.cmd run dev`, **Vite** inicia un servidor de desarrollo en tu computadora. El navegador le pide `index.html`, que contiene el contenedor `root` y carga `src/main.tsx`. Ese archivo inicia **React**, que muestra `App` dentro del contenedor.
 
-La aplicación y sus datos viven en el navegador. El servidor de Vite sirve código y refleja cambios mientras programás; todavía no es un servidor de negocio ni una base de datos. Cerrar la terminal detiene Vite. Recargar la página vuelve a ejecutar el programa con los ejemplos iniciales.
+La aplicación y sus datos viven en el navegador. El servidor de Vite sirve código y refleja cambios mientras programás; todavía no es un servidor de negocio ni una base de datos. Cerrar la terminal detiene Vite. Recargar vuelve a ejecutar el programa; desde la tercera entrega recupera los datos locales antes de mostrar la interfaz.
 
 **npm** administra dependencias y ejecuta los comandos de `package.json`. Vite transforma el código para el navegador. El comando `build` usa TypeScript para comprobar tipos y Vite para generar archivos distribuibles en `dist/`. Generarlos no equivale a publicarlos.
 
@@ -114,6 +114,8 @@ Los `label` identifican campos; `aria-label` explica los botones que solo muestr
 | `src/types.ts` | Contratos de datos y unidades disponibles. |
 | `src/data.ts` | Crea los ejemplos de cada nueva sesión. |
 | `src/lib/shopping.ts` | Comparación de nombres, validación y operaciones de datos. |
+| `src/lib/storage.ts` | Validación, lectura y escritura de la copia local versionada. |
+| `tests/storage.test.ts` | Recuperación, formatos inválidos y errores del almacenamiento. |
 | `src/index.css` | Tailwind, colores y estilos compartidos. |
 | `tests/shopping.test.ts` | Casos importantes de lógica con Node. |
 | `vite.config.ts` | Conecta los plugins de React y Tailwind con Vite. |
@@ -143,3 +145,15 @@ El nuevo tipo `Purchase` conserva nombre, unidad, cantidad, fecha e identificado
 `PurchaseDialog.tsx` usa el elemento HTML nativo `dialog`. `showModal()` lo abre y mantiene el teclado dentro de la ventana. Un efecto lo cierra al desmontar el componente. Cancelar o presionar Escape solo cierra el formulario; confirmar valida antes de modificar datos. `PurchaseHistory.tsx` muestra los eventos usando sus identificadores como claves.
 
 Todavía no hay persistencia: pendientes e historial se reinician al recargar. Registrar una compra no calcula stock disponible en casa.
+
+## 12. Conservar los datos (tercera entrega)
+
+En las etapas anteriores recargar reiniciaba todo. Ahora `src/lib/storage.ts` lee una copia de los datos desde `localStorage`, un almacén de texto del navegador. `JSON.stringify` convierte el estado a texto y `JSON.parse` lo recupera, de manera parecida a `json.dumps` y `json.loads` de Python.
+
+Al iniciar, `App` llama a `loadState` mediante el inicializador de `useState`. Si no existe una copia, usa los ejemplos; si existe y es válida, la usa incluso si la lista está vacía. Un segundo estado conserva esos datos activos. Cada acción actualiza React como antes; un `useEffect` detecta el nuevo estado y llama a `saveState`. Este efecto sincroniza React con un sistema externo: el almacenamiento del navegador. No se guardan los campos a medio escribir ni los mensajes.
+
+La copia tiene una versión para poder distinguir cambios de formato futuros. Al leer JSON no alcanza con escribir `as ShoppingState`: eso solo convencería al compilador. `isShoppingState` comprueba los valores realmente recibidos. Su retorno `value is ShoppingState` es un predicado de tipos: si la validación tiene éxito, TypeScript permite tratar ese valor como nuestro estado.
+
+`try/catch` permite controlar errores, como en Python. Un navegador puede bloquear el almacenamiento o agotar el espacio. Si falla el guardado, la aplicación sigue en memoria y avisa. Si no puede leer o validar una copia, evita sobrescribirla con los ejemplos. Las pruebas usan un objeto pequeño con `getItem` y `setItem`, de modo que podemos simular lectura, escritura y errores sin navegador.
+
+Esto no es todavía una base de datos compartida: cada origen y perfil del navegador tiene su almacenamiento. Usá una sola pestaña para editar; dos pestañas pueden guardar estados distintos y la última escritura reemplaza la anterior. El README explica las limitaciones y cómo probar la recarga. Los textos sobre memoria de las secciones anteriores describen las primeras etapas; esta sección documenta el comportamiento actual.

@@ -1,5 +1,16 @@
 # Decisiones del proyecto
 
+## Entrega 3: guardado local
+
+- Se conserva el estado completo en `localStorage`, sin dependencias nuevas. React mantiene el estado activo; al cambiarlo, un efecto guarda una copia JSON. Solo se persisten los datos de negocio, no los filtros, mensajes ni formularios abiertos.
+- La clave `en-casa:shopping:v1` contiene `{ version: 1, state }`. Se valida la estructura, las unidades, cantidades, identificadores, referencias y fechas al recuperarla. Una lista vacía guardada es válida y no se reemplaza con ejemplos.
+- Si falla la lectura o el formato es desconocido, mostramos ejemplos en memoria y un aviso; no sobrescribimos el contenido existente. Si falla la escritura, avisamos que los últimos cambios no están guardados. No hay migraciones automáticas ni borrado silencioso.
+- El alcance es un navegador y origen, con una sola pestaña de edición. No implementamos sincronización entre pestañas ni dispositivos. Borrar datos del sitio o cerrar un perfil privado puede eliminar esta copia; no es un respaldo.
+- Se agregaron cuatro pruebas de persistencia y validación; ahora hay trece pruebas. Se mantiene la separación entre lógica de compras y acceso al navegador en `src/lib/storage.ts`.
+- Verificado en Chrome con un perfil aislado: alta y compra parcial conservadas al recargar y volver a abrir; datos dañados sin sobrescritura; aviso visible al simular escritura bloqueada. Compilación, lint y trece pruebas correctos.
+- Estas decisiones reemplazan las limitaciones de memoria temporal descritas para las entregas anteriores. El próximo paso es cuentas y familias con Supabase; después sincronización y revisión integral del MVP.
+
+
 ## Entrega 2: compras parciales e historial
 
 - La compra ahora se confirma en una ventana nativa, indicando una cantidad positiva hasta el total pendiente. Se puede cancelar con el botón o Escape.

@@ -1,15 +1,22 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ProductForm } from './components/ProductForm.tsx'
 import { ShoppingList } from './components/ShoppingList.tsx'
 import { Icon } from './components/Icon.tsx'
 import { PurchaseDialog } from './components/PurchaseDialog.tsx'
 import { PurchaseHistory } from './components/PurchaseHistory.tsx'
-import { createInitialState } from './data.ts'
+import { loadState, saveState } from './lib/storage.ts'
 import { addProduct, recordPurchase, removePending, updateQuantity } from './lib/shopping.ts'
 import type { Product, ProductDraft } from './types.ts'
 
 export default function App() {
-  const [state, setState] = useState(createInitialState)
+  const [initial] = useState(() => loadState(() => window.localStorage))
+  const [state, setState] = useState(initial.state)
+  const [storageError, setStorageError] = useState(initial.error)
+  useEffect(() => {
+    // El aviso depende del resultado de escribir en un sistema externo al render.
+    // oxlint-disable-next-line react/set-state-in-effect
+    if (initial.canSave) setStorageError(saveState(() => window.localStorage, state))
+  }, [state, initial.canSave])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [notice, setNotice] = useState('')
   const [buyingId, setBuyingId] = useState<string | null>(null)
@@ -77,10 +84,11 @@ export default function App() {
           <a className="button-primary shrink-0" href="#agregar-producto" onClick={() => setEditingId(null)}><Icon name="plus" size={18} />Agregar producto</a>
         </div>
 
-        <aside className="mb-7 flex items-start gap-3 rounded-2xl border border-[#e4dcc2] bg-[#f7f2e5] px-4 py-3.5 text-[#655733] sm:px-5" aria-label="Aviso sobre datos temporales">
+        <aside className="mb-7 flex items-start gap-3 rounded-2xl border border-[#e4dcc2] bg-[#f7f2e5] px-4 py-3.5 text-[#655733] sm:px-5" aria-label="Información sobre guardado local">
           <Icon name="info" size={19} style={{ flexShrink: 0, marginTop: 1 }} />
-          <p className="text-xs leading-relaxed sm:text-sm"><strong>Esta es una versión de prueba local.</strong> Los datos viven en memoria y se pierden al recargar. Por ahora, la lista no se comparte entre dispositivos.</p>
+          <p className="text-xs leading-relaxed sm:text-sm"><strong>Guardado en este navegador.</strong> La lista, el catálogo y las compras se conservan al recargar si el almacenamiento está disponible. Usá una sola pestaña: todavía no hay sincronización entre pestañas ni dispositivos.</p>
         </aside>
+        {storageError && <p role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{storageError}</p>}
 
         <div className="mb-7 grid grid-cols-2 gap-3 sm:gap-4">
           <div className="stat-card"><div><p className="text-xs font-medium text-muted sm:text-sm">Productos pendientes</p><p className="mt-1 text-3xl font-bold tracking-tight">{state.pending.length.toString().padStart(2, '0')}</p></div><span className="stat-icon bg-sage text-forest"><Icon name="basket" size={24} /></span></div>
@@ -96,10 +104,10 @@ export default function App() {
           </div>
           <div className="space-y-5 lg:sticky lg:top-6">
             <ProductForm key={editingId ?? 'new'} catalog={state.catalog} pendingIds={state.pending.map((item) => item.productId)} editing={editing} onAdd={handleAdd} onSave={handleSave} onEdit={handleEdit} onCancel={() => setEditingId(null)} />
-            <div className="flex items-start gap-3 px-2 py-1"><Icon name="leaf" size={21} style={{ color: '#245c46', flexShrink: 0, marginTop: 2 }} /><div><h2 className="text-sm font-semibold">Una lista que va creciendo</h2><p className="mt-1 text-xs leading-relaxed text-muted">Tus productos quedan en el catálogo de esta sesión, incluso después de comprarlos.</p></div></div>
+            <div className="flex items-start gap-3 px-2 py-1"><Icon name="leaf" size={21} style={{ color: '#245c46', flexShrink: 0, marginTop: 2 }} /><div><h2 className="text-sm font-semibold">Una lista que va creciendo</h2><p className="mt-1 text-xs leading-relaxed text-muted">Tus productos quedan en el catálogo, incluso después de comprarlos.</p></div></div>
           </div>
         </div>
-        <footer className="mt-10 flex flex-col justify-between gap-2 border-t border-line pt-5 text-xs text-muted sm:flex-row"><p>Hecha para la vida de todos los días.</p><p>Segunda entrega · Datos temporales</p></footer>
+        <footer className="mt-10 flex flex-col justify-between gap-2 border-t border-line pt-5 text-xs text-muted sm:flex-row"><p>Hecha para la vida de todos los días.</p><p>Tercera entrega · Guardado local</p></footer>
       </main>
       {buyingProduct && buyingItem && <PurchaseDialog product={buyingProduct} pending={buyingItem.quantity} onSave={handlePurchase} onCancel={() => setBuyingId(null)} />}
     </div>

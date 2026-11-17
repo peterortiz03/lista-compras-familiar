@@ -117,7 +117,7 @@ export function ProductForm({ catalog, pendingIds, editing, onAdd, onSave, onEdi
         <button type="submit" className="button-primary w-full"><Icon name={editing ? 'check' : 'plus'} size={18} />{editing ? 'Guardar cantidad' : 'Agregar producto'}</button>
         {editing && <button type="button" className="button-secondary w-full" onClick={onCancel}>Cancelar edición</button>}
       </form>
-      {!editing && <p className="mt-4 border-t border-line pt-4 text-xs leading-relaxed text-muted">Cada producto nuevo se suma a tus sugerencias durante esta sesión.</p>}
+      {!editing && <p className="mt-4 border-t border-line pt-4 text-xs leading-relaxed text-muted">Cada producto nuevo se suma al catálogo y a tus sugerencias.</p>}
     </section>
   )
 }
