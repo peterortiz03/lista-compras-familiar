@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import type { FamilyContext, Product, ProductDraft, Purchase } from '../types.ts'
 import type { ShoppingCommand } from '../lib/shared-shopping.ts'
 import { useShoppingData } from '../hooks/useShoppingData.ts'
@@ -10,7 +10,9 @@ import { PurchaseDialog } from './PurchaseDialog.tsx'
 import { PurchaseHistory } from './PurchaseHistory.tsx'
 import { Icon } from './Icon.tsx'
 import { ShareList } from './ShareList.tsx'
-import { CatalogPanel } from './CatalogPanel.tsx'
+import { ProductPhotoProvider } from './ProductThumbnail.tsx'
+
+const CatalogPanel = lazy(() => import('./CatalogPanel.tsx').then(module => ({ default: module.CatalogPanel })))
 
 interface Selection { product: Product; quantity: number; version?: string; note?: string; urgent?: boolean }
 
@@ -74,7 +76,7 @@ export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) 
   }
 
   const disabled = busy || !ready || (!!family && !!error)
-  return <section aria-label={family ? `Lista familiar de ${family.name}` : 'Lista local'}>
+  return <ProductPhotoProvider family={family}><section aria-label={family ? `Lista familiar de ${family.name}` : 'Lista local'}>
     <aside className="mb-5 rounded-2xl border border-line bg-sage p-4 text-sm leading-relaxed text-forest">
       <strong>{family ? `Lista compartida · ${family.name}` : 'Lista local de este navegador'}</strong>
       <p className="mt-1">{family ? 'Los integrantes ven los mismos productos. Se actualiza cada 3 segundos mientras esta pestaña está visible y al volver a ella. Las operaciones requieren conexión.' : 'Se guarda en este navegador. Ingresá y creá o elegí tu familia para usar la lista compartida. Esta copia no se sube automáticamente.'}</p>
@@ -92,11 +94,11 @@ export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) 
       <div className="stat-card"><div><p className="text-xs text-muted">En tu catálogo</p><p className="mt-1 text-3xl font-bold">{state.catalog.filter(product => product.active !== false).length}</p></div><Icon name="leaf" /></div>
     </div>
     <fieldset disabled={disabled} className="min-w-0">
-      {view === 'catalog' ? <CatalogPanel products={state.catalog} onAction={catalogAction} /> : view === 'history' ? <PurchaseHistory history={state.history} family={family} onRevert={handleRevert} /> : <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      {view === 'catalog' ? <Suspense fallback={<p role="status">Cargando catálogo…</p>}><CatalogPanel products={state.catalog} photosEnabled={!!family && !!state.photoStorage} onAction={catalogAction} /></Suspense> : view === 'history' ? <PurchaseHistory history={state.history} family={family} onRevert={handleRevert} /> : <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0"><ShoppingList state={state} onEdit={handleEdit} onRemove={handleRemove} onBuy={product => setBuying(select(product))} /></div>
         <div className="min-w-0 lg:sticky lg:top-6"><ProductForm key={editing?.product.id ?? 'new'} catalog={state.catalog} history={state.history} pending={state.pending} pendingIds={state.pending.map(item => item.productId)} editing={editing} onAdd={handleAdd} onSave={handleSave} onEdit={handleEdit} onCancel={() => setEditing(null)} /></div>
       </div>}
     </fieldset>
     {buying && <PurchaseDialog product={buying.product} pending={buying.quantity} onSave={handlePurchase} onCancel={() => setBuying(null)} />}
-  </section>
+  </section></ProductPhotoProvider>
 }

@@ -9,6 +9,15 @@
   --color-line: #e4e8df;
 }
 
+@media (max-width: 479px) {
+  .pending-product:has(.product-thumbnail) { display: grid; grid-template-columns: 48px minmax(0, 1fr) 44px; gap: 8px; }
+  .pending-product:has(.product-thumbnail) > .product-thumbnail { grid-column: 1; grid-row: 1; }
+  .pending-product:has(.product-thumbnail) > div { grid-column: 2; grid-row: 1; }
+  .pending-product:has(.product-thumbnail) > .buy-button { grid-column: 1; grid-row: 2; }
+  .pending-product:has(.product-thumbnail) > .quantity-button { grid-column: 2; grid-row: 2; justify-self: start; }
+  .pending-product:has(.product-thumbnail) > .icon-button { grid-column: 3; grid-row: 1 / span 2; }
+}
+
 @layer base {
   body { margin: 0; min-width: 320px; background: #f7f8f2; color: var(--color-ink); }
   button, a, input, select { -webkit-tap-highlight-color: transparent; }

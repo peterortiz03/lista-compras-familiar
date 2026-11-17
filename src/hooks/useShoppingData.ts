@@ -5,6 +5,7 @@ import { addProduct, changeCatalogProduct, createCatalogProduct, recordPurchase,
 import { parseMutationResult, parseSharedState, sharedError } from '../lib/shared-shopping.ts'
 import type { MutationResult, ShoppingCommand } from '../lib/shared-shopping.ts'
 import { supabase } from '../lib/supabase.ts'
+import { cleanupPhotos } from '../lib/product-photos.ts'
 
 export function useShoppingData(family: FamilyContext | null) {
   const [initial] = useState(() => family
@@ -20,6 +21,8 @@ export function useShoppingData(family: FamilyContext | null) {
   const sequence = useRef(0)
   const reading = useRef<AbortController | null>(null)
   const pending = useRef<{ signature: string; id: string } | null>(null)
+  const cleaning = useRef(false)
+  const lastCleanup = useRef(0)
   const invalidateRead = useCallback(() => {
     ++sequence.current
     reading.current?.abort()
@@ -49,6 +52,10 @@ export function useShoppingData(family: FamilyContext | null) {
       const snapshot = parseSharedState(response.data)
       if (active.current && request === sequence.current) {
         setState(snapshot); setError(''); setReady(true); setLastSync(new Date())
+        if (snapshot.photoStorage && !cleaning.current && Date.now() - lastCleanup.current > 60000) {
+          cleaning.current = true; lastCleanup.current = Date.now()
+          void cleanupPhotos(supabase).catch(() => {}).finally(() => { cleaning.current = false })
+        }
       }
       return true
     } catch (failure) {
@@ -97,6 +104,7 @@ export function useShoppingData(family: FamilyContext | null) {
         case 'catalog_restore': setState(changeCatalogProduct(state, command.productId, { active: true })); break
         case 'catalog_favorite': setState(changeCatalogProduct(state, command.productId, { favorite: command.favorite })); break
         case 'revert_purchase': setState(revertPurchase(state, command.purchaseId, new Date().toISOString())); break
+        case 'catalog_save_photo': throw new Error('Las fotografías solo están disponibles en una familia conectada.')
         default: throw new Error('La importación requiere una familia conectada.')
       }
       return { kind: 'ok' }

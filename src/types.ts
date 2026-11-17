@@ -9,6 +9,7 @@ export const UNITS = [
 export type Unit = (typeof UNITS)[number]['value']
 
 export interface Product {
+  photoPath?: string | null
   favorite?: boolean
   category?: Category
   active?: boolean
@@ -30,6 +31,7 @@ export interface PendingItem {
 }
 
 export interface ShoppingState {
+  photoStorage?: boolean
   history: Purchase[]
   catalog: Product[]
   pending: PendingItem[]

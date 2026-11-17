@@ -12,6 +12,7 @@ export type ShoppingCommand =
   | { type: 'catalog_archive' | 'catalog_restore'; productId: string; revision?: string }
   | { type: 'revert_purchase'; purchaseId: string }
   | { type: 'catalog_favorite'; productId: string; favorite: boolean; revision?: string }
+  | { type: 'catalog_save_photo'; productId: string; isNew: boolean; name: string; unit: Unit; category: Category; revision?: string; photoPath: string | null; removePhoto: boolean }
 
 export type MutationResult = { kind: 'ok' } | { kind: 'added' | 'duplicate'; product: Product }
 

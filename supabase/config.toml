@@ -1,0 +1,2 @@
+[functions.cleanup-product-photos]
+verify_jwt = false
