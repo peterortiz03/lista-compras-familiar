@@ -1,4 +1,4 @@
-# Cómo funciona la aplicación — Entrega 4
+# Cómo funciona la aplicación — Entrega 5
 
 ## 1. Qué corre y dónde
 
@@ -177,3 +177,29 @@ Una invitación permite una incorporación. Al usarla, PostgreSQL bloquea su fil
 Archivos nuevos: `src/lib/supabase.ts` crea el cliente si hay configuración; `src/components/AccountPanel.tsx` contiene acceso y gestión familiar; `supabase/migrations/0001_accounts_and_families.sql` define tablas, permisos y funciones; `supabase/tests/accounts_and_families.sql` comprueba esas reglas y termina con `ROLLBACK` para descartar datos ficticios. La guía `docs/configurar-supabase.md` conecta estas piezas con tu proyecto real.
 
 Las variables de Vite que empiezan por `VITE_` llegan al navegador. Por eso solo usamos una URL y una clave pública, nunca contraseñas de PostgreSQL ni claves secretas. La clave pública identifica al proyecto; los permisos reales dependen de la sesión y de RLS. Referencias: [Auth con React](https://supabase.com/docs/guides/auth/quickstarts/react), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security) y [funciones PostgreSQL](https://supabase.com/docs/guides/database/functions).
+
+## 14. Compartir datos sin perder consistencia (quinta entrega)
+
+Ahora la cuenta determina la familia y su lista. `App` recibe esa familia desde el panel de cuentas y monta `ShoppingWorkspace` con una clave que combina usuario y familia. Cambiarla desmonta el contexto anterior, cerrando formularios y descartando sus solicitudes. Sin familia se mantiene un espacio local separado.
+
+Un **hook propio** es una función que compone hooks de React para una necesidad de la aplicación. `useShoppingData` devuelve estado, carga, errores y operaciones. En modo local usa las funciones anteriores y localStorage; en modo familiar llama a Supabase. No es otro servidor ni una biblioteca de estado global.
+
+Las llamadas remotas devuelven **promesas**. `async/await` permite esperar la confirmación antes de mostrar éxito, de forma parecida al código asíncrono de Python. Por eso los formularios ahora esperan `onAdd` y `onSave`, muestran errores y deshabilitan sus controles mientras guardan. La información ingresada permanece si la operación falla.
+
+Un efecto consulta la lista al entrar y prepara un temporizador de tres segundos. También escucha foco y reconexión. Su limpieza elimina temporizadores y eventos y cancela lecturas al desmontar. `useRef` guarda controles que no necesitan dibujarse: la solicitud actual, su identificador y una secuencia de lecturas. `useCallback` mantiene estable la función de actualización entre renders mientras no cambie la familia; así el efecto no se reinicia por cualquier cambio de la pantalla.
+
+No aplicamos respuestas antiguas: cada lectura tiene un número de secuencia. Si llega después de otra lectura o de iniciar una escritura, se descarta. Esto evita que una respuesta lenta reemplace información más reciente. `AbortController` permite cancelar la petición y fijar un límite de espera; no garantiza cancelar una transacción que el servidor ya recibió.
+
+En PostgreSQL, `get_family_shopping` construye la instantánea de catálogo, pendientes e historial con una sola consulta y las políticas RLS existentes. La función de escritura recibe un tipo de acción y sus datos. Sus tipos en TypeScript forman una **unión discriminada**: `type: 'buy'` exige producto y cantidad; `type: 'add'` exige nombre y unidad. El servidor no confía en esos tipos y valida de nuevo.
+
+Para comprar se necesita una **transacción**: bajar la cantidad y crear el historial deben ocurrir juntos. `mutate_shopping` bloquea la fila de la familia para ordenar sus escrituras. Como todas pasan por esta función y el cliente no puede escribir tablas directamente, dos altas simultáneas no duplican un producto.
+
+El bloqueo no alcanza para saber si una persona estaba mirando una cantidad vieja. Cada pendiente tiene una versión UUID que cambia al editar o comprar. El formulario guarda la versión que mostró al abrirse. Si otra persona actuó después, PostgreSQL detecta la diferencia y rechaza la operación. Se conoce como control de concurrencia optimista: no bloqueamos la pantalla de otro integrante mientras alguien piensa qué comprar.
+
+También hay un identificador por solicitud. Si el servidor guardó una compra pero se perdió la respuesta, repetir la misma solicitud recupera su resultado sin ejecutar otra compra. Esta propiedad se llama **idempotencia**. Es distinta del control de versiones: la versión protege frente a decisiones simultáneas; el identificador protege frente a reintentar la misma decisión.
+
+`private.shopping_operations` conserva esos resultados fuera de las tablas accesibles al navegador. La función verifica que usuario, acción y datos coincidan antes de reutilizarlos. Las compras toman autor y fecha del servidor. El historial local anterior se conserva, pero no se atribuye artificialmente a quien haga la importación.
+
+Los archivos principales nuevos son `src/hooks/useShoppingData.ts`, `src/components/ShoppingWorkspace.tsx`, `src/lib/shared-shopping.ts`, la migración `0002_shared_shopping.sql` y sus pruebas SQL. `shared-shopping.ts` valida respuestas y prepara los datos de importación. Los tipos ayudan al compilar; los validadores protegen al recibir información real.
+
+El [recorrido de sincronización](sincronizacion.md) explica cómo probarlo con dos cuentas y qué hacer ante conflictos. Las secciones anteriores describen las etapas históricas: desde esta entrega, la lista familiar sí se guarda en Supabase y la copia local queda independiente. Referencia para las llamadas: [funciones RPC de Supabase](https://supabase.com/docs/reference/javascript/rpc).

@@ -1,5 +1,22 @@
 # Decisiones del proyecto
 
+## Entrega 5: compras familiares compartidas
+
+- Se conserva la copia local y se agrega una lista remota por familia; nunca se mezclan automáticamente. La sesión y la familia seleccionan un componente nuevo con clave de usuario y familia para descartar datos y formularios del contexto anterior.
+- `useShoppingData` reúne carga, confirmación de cambios y guardado local. `ShoppingWorkspace` coordina la interfaz. Las funciones locales de compras siguen siendo puras y se usan sin conexión a Supabase en modo local.
+- Sincronización mediante consultas periódicas cada tres segundos en pestañas visibles, además de foco, reconexión y confirmación de escrituras. No se introduce Realtime: para este volumen evita suscripciones y configuración adicional. No se promete actualización instantánea ni edición offline.
+- `get_family_shopping` devuelve una instantánea consistente en una consulta SQL, con RLS. `mutate_shopping` deriva usuario y familia de la sesión y ejecuta las escrituras controladas. No se concedieron permisos de escritura directa al cliente.
+- Las operaciones se serializan con un bloqueo de la fila familiar. Los pendientes tienen una versión UUID; editar, quitar o comprar requiere la versión observada. El formulario conserva la versión de apertura, aunque la pantalla reciba actualizaciones. Ante conflicto debe cerrarse y revisarse.
+- Cada solicitud tiene un UUID y un resultado privado persistido por familia. Repetir la misma solicitud del mismo usuario devuelve el resultado anterior. No se cambian datos optimistamente ni se reintentan automáticamente acciones nuevas a ciegas.
+- La compra reduce o retira el pendiente y registra autor, fecha y cantidad en la misma transacción. PostgreSQL usa decimal exacto; se rechazan más de tres decimales antes de almacenar y fracciones de unidades/paquetes.
+- La importación copia solo catálogo y pendientes a una familia vacía, una vez, hasta 500 productos y con confirmación. No importa el historial sin autor verificable ni modifica la copia local. El servidor valida nuevamente todos los datos.
+- Las respuestas de lecturas viejas se descartan; se cancelan al cambiar de contexto o iniciar una escritura. Si falla la sincronización se conserva la última instantánea confirmada y se deshabilita la edición hasta recuperar la conexión.
+- Verificación: dieciséis pruebas Node, dos migraciones y ambas suites SQL en PostgreSQL temporal. En Chrome con identidades simuladas y ese PostgreSQL se probaron dos cuentas, actualización, duplicados, conflictos, pérdida de confirmación, recuperación e importación, sin desbordes a 320, 390 y 1440 px.
+- El usuario confirmó las pruebas reales de cuentas y la instalación de 0002. Se verificó en la API real que la nueva función existe y rechaza solicitudes sin sesión. No se accedió a sus sesiones ni se escribieron compras de prueba en su proyecto.
+- La revisión integral con usuarios reales queda como próximo paso. PWA y publicación siguen fuera de esta entrega.
+
+
+
 ## Entrega 4: cuentas y familias (integración preparada)
 
 - Se usa el cliente oficial `@supabase/supabase-js`. Sin URL y clave pública válidas se mantiene el modo local. `.env.example` declara los valores; los archivos privados de entorno siguen excluidos de Git.

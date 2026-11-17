@@ -1,16 +1,13 @@
 # Lista de Compras Familiar
 
-**En casa** es una aplicación para organizar las compras del hogar. Esta cuarta entrega incorpora el código de cuentas y familias con Supabase y mantiene la lista con guardado local en el navegador, construida con React, TypeScript, Vite y Tailwind CSS.
+**En casa** organiza las compras del hogar con React, TypeScript, Vite, Tailwind CSS y Supabase. La quinta entrega conecta la lista familiar: catálogo, pendientes, compras completas y parciales e historial con autor.
 
-## Requisitos
+## Requisitos y ejecución en Windows
 
-- Windows con PowerShell, Git y npm.
-- Node.js **22.18 o superior**, compatible con Vite; preferentemente una versión LTS vigente. Verificado con Node 26.13.1 y npm 11.20.0.
-- Un navegador moderno actualizado.
+- Node.js 22.18 o superior compatible con Vite, preferentemente LTS vigente; npm y un navegador moderno.
+- Para compartir: un proyecto Supabase con las dos migraciones aplicadas y `.env.local` configurado. Sin Supabase se puede usar la copia local.
 
-## Instalación y ejecución
-
-Desde PowerShell, en la carpeta del repositorio:
+Desde PowerShell:
 
 ```powershell
 cd "C:\Users\Pedro Peter\Repositorios GitHub\lista-compras-familiar"
@@ -18,21 +15,41 @@ npm.cmd ci
 npm.cmd run dev
 ```
 
-Abrí la dirección que muestre Vite, normalmente `http://localhost:5173`. Para detenerlo, presioná `Ctrl+C` en esa terminal. `npm.cmd` evita el bloqueo de `npm.ps1` por la política de ejecución de PowerShell, sin modificarla.
+Abrí la dirección que indique Vite, normalmente `http://localhost:5173`; detenelo con `Ctrl+C`. `npm.cmd` evita el bloqueo de `npm.ps1` sin modificar la política de PowerShell. `npm ci` instala las versiones fijadas en `package-lock.json`.
 
-`npm ci` instala las versiones fijadas en `package-lock.json`. Cuando agregues o cambies dependencias, usá `npm.cmd install` para actualizar ese archivo.
+El servidor local debe seguir abierto para cargar la aplicación. Hasta publicar, guardar datos en Supabase no reemplaza el alojamiento de la página ni habilita edición offline.
 
-## Estado actual
+## Configuración y actualización
 
-- Productos de ejemplo y lista de pendientes con búsqueda.
-- Alta de productos con cantidad y unidad.
-- Sugerencias del catálogo, sin distinguir tildes, mayúsculas o espacios repetidos.
-- Prevención de duplicados: ofrece editar el pendiente existente, sin sumar cantidades automáticamente.
-- Edición de cantidades, eliminación y registro de compras completas o parciales.
-- Catálogo que crece con el uso y conserva los productos retirados de pendientes.
-- Diseño adaptable a celulares y computadoras, etiquetas accesibles y botones táctiles.
+- Primera instalación: [cuentas y familias con Supabase](docs/configurar-supabase.md), incluida la migración 0001.
+- Si ya tenés cuentas: aplicá solo [0002_shared_shopping.sql](supabase/migrations/0002_shared_shopping.sql) en SQL Editor. No repitas 0001 ni borres tablas. Después reiniciá Vite.
+- [Guía de sincronización y recorrido con dos cuentas](docs/sincronizacion.md).
 
-**La lista, el catálogo y el historial se guardan automáticamente en este navegador con localStorage.** Recargar o cerrar la página conserva los cambios si el navegador permite guardarlos. Los ejemplos aparecen solo cuando no hay datos previos. Las cuentas y familias requieren configurar Supabase; la lista todavía no se sincroniza ni se asocia a esas cuentas; usá una sola pestaña para evitar que una versión antigua reemplace cambios de otra.
+La aplicación usa `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`. `.env.example` contiene los nombres; copiá y completá `.env.local`, excluido de Git. Nunca uses `service_role`, claves secretas ni la contraseña de PostgreSQL en el navegador.
+
+## Comportamiento actual
+
+- Cada cuenta pertenece a una familia. El responsable puede generar una invitación de un uso y siete días de vigencia. Una nueva reemplaza la anterior.
+- Al ingresar se muestra la lista de esa familia. Sin sesión o sin familia cargada se muestra la copia local, con una etiqueta diferente.
+- Alta de productos, sugerencias, búsqueda, cantidades y unidades, prevención de duplicados, edición y eliminación de pendientes.
+- Compras parciales y completas con fecha, hora y autor en el historial. Eliminar no registra una compra.
+- Actualización automática aproximadamente cada tres segundos en pestañas visibles, al recuperar foco o conexión y después de guardar. Botón de actualización manual. No requiere Supabase Realtime.
+- Si otra persona cambia un pendiente mientras lo editás o comprás, se rechaza el formulario anterior para que revises la cantidad actualizada.
+- Las operaciones se confirman en el servidor y tienen identificadores para evitar repetir compras al reintentar. No hay escrituras sin conexión.
+- Importación confirmada de catálogo y pendientes locales a una familia vacía, una vez y con un máximo de 500 productos. El historial antiguo no se importa; toda la copia local original se conserva.
+
+La copia local pertenece al navegador, perfil y origen. `localhost:5173` y `127.0.0.1:5173` guardan copias distintas. Borrar los datos del sitio puede eliminarla. No se mezcla ni se sube automáticamente al ingresar. Usá una sola pestaña para editar en modo local; el modo familiar sí admite varias cuentas y pestañas.
+
+## Prueba rápida de sincronización
+
+1. Ingresá en dos perfiles de navegador con cuentas de la misma familia. Ambos deben mostrar **Lista compartida** y el mismo nombre familiar.
+2. Agregá Huevos con 5 unidades desde A. En B deben aparecer en unos segundos sin recargar.
+3. Intentá agregar `HUEVOS` desde B: debe ofrecer editar, sin duplicar ni sumar.
+4. Comprá 3 desde A: B debe ver 2 pendientes y el registro con el autor.
+5. Abrí una compra en A y cambiá el pendiente desde B. Confirmar la ventana anterior de A debe avisar del cambio; cerrala y abrila otra vez.
+6. Recargá y comprobá persistencia. Cerrá sesión: debe reaparecer la copia local. Una cuenta de otra familia no debe ver las compras anteriores.
+
+Si la red falla, la interfaz conserva los últimos datos confirmados y muestra un aviso; las operaciones quedan bloqueadas hasta recuperar la lectura. Revisá lista e historial antes de reintentar una operación cuya confirmación no llegó.
 
 ## Comprobaciones
 
@@ -42,57 +59,16 @@ npm.cmd run lint
 npm.cmd test
 ```
 
-`build` comprueba TypeScript y genera la versión de producción en `dist/`; `lint` revisa problemas de código con Oxlint, incluido en la plantilla oficial de Vite; `test` ejecuta trece casos de lógica con el ejecutor incorporado de Node. No se instaló un framework de pruebas.
+Son dieciséis casos de lógica con el ejecutor de Node. También hay pruebas transaccionales de permisos y compras en `supabase/tests/`, para SQL Editor como administrador, con `ROLLBACK` final. No se agregó un framework de pruebas ni dependencias nuevas en esta entrega.
 
-Para abrir localmente la compilación:
+Se probaron las migraciones en PostgreSQL temporal y la interfaz con dos cuentas aisladas y un servidor local conectado a ese motor. La API real reconoce la función nueva y rechaza el acceso anónimo; el usuario confirmó la configuración de cuentas y la ejecución de 0002. Eso no equivale a haber accedido a sus sesiones ni probado compras reales en su proyecto.
 
-```powershell
-npm.cmd run preview
-```
+Para abrir el build local: `npm.cmd run preview`, después de `build`. No publica la aplicación.
 
-Este comando requiere haber ejecutado `build` y no publica la aplicación.
+## Próximos pasos y alcance
 
-## Recorrido de prueba visual
+Queda la revisión integral del MVP con cuentas reales y los ajustes que surjan, incluida recuperación de contraseña. Después, publicación y PWA. No se implementan precios, comercios, notificaciones, inventario exacto, códigos de barras ni tickets. El historial y el catálogo aún se recuperan completos; paginación y retención de solicitudes se revisarán si crece su volumen.
 
-1. Al abrir la página, comprobá los cinco pendientes y el aviso de guardado local.
-2. En **Agregar producto**, escribí `Manz`: elegí **Manzanas**, indicá `1,5` kg y agregalas. Buscalas en pendientes.
-3. Intentá agregar ` LECHE `: debe avisar que ya está pendiente. Elegí **Editar cantidad existente**, cambiá a `3` y guardá. La lista debe conservar una sola Leche.
-4. Tocá la cantidad de Huevos. Probá `0` o `1,5`: debe rechazarlos. Guardá `6` y comprobá la actualización.
-5. Agregá un producto nuevo, como Yerba, en paquetes. Eliminá ese pendiente con la papelera y volvé a escribir su nombre: debe aparecer en sugerencias.
-6. Tocá el círculo de Leche. Probá una cantidad superior a la pendiente: debe rechazarse. Confirmá una cantidad menor: debe reducir el pendiente y crear un registro en el historial. Luego comprá el resto: debe salir de pendientes y crear otro registro. Cancelar o presionar Escape no debe cambiar nada.
-7. Buscá un texto inexistente y limpiá el filtro. Retirá todos los pendientes para ver la lista vacía.
-8. En las herramientas del navegador (`F12`), probá una pantalla de 390 px de ancho y otra de escritorio. Recorré también los controles con `Tab` y activalos con el teclado.
-9. Agregá un producto nuevo, registrá una compra parcial y recargá: deben conservarse el producto, la cantidad restante y el historial. Cerrá y volvé a abrir la página con la misma dirección y navegador.
-
-## Próximas entregas
-
-El código de cuentas individuales, familias e invitaciones está preparado. Falta crear el proyecto Supabase y verificar el flujo real de correo y acceso. Después faltan persistencia compartida y sincronización de las compras. PWA y publicación en Vercel quedan para después. No se incluyen precios, comercios, notificaciones, stock, códigos de barras ni tickets.
-
-Primero completaremos la configuración y la verificación real de cuentas y familias. Después conectaremos las compras y la sincronización, y realizaremos una revisión integral del MVP.
-
-- [Decisiones funcionales y técnicas](docs/decisiones.md)
+- [Decisiones](docs/decisiones.md)
 - [Guía de aprendizaje](docs/guia-aprendizaje.md)
-
-## Uso local y publicación
-
-Vite debe seguir abierto para acceder a la aplicación. Una página ya cargada puede seguir funcionando en memoria al detenerlo, pero no podrá cargarse de nuevo. `preview` también requiere un servidor abierto. Cuando se publique, el alojamiento servirá la aplicación sin depender de tu computadora. Esa etapa todavía no está implementada.
-
-## Límites del guardado local
-
-Los datos pertenecen al navegador, perfil y origen (protocolo, dirección y puerto). `localhost:5173` y `127.0.0.1:5173` guardan listas distintas. Usá siempre la misma dirección. Otro dispositivo no verá esta lista. Limpiar los datos del sitio elimina la copia local; el modo privado puede descartarla al cerrar. Esto no es una copia de seguridad ni permite todavía cargar la aplicación sin el servidor.
-
-Si aparece un aviso de guardado fallido, los cambios actuales siguen en memoria: evitá recargar hasta revisar permisos o espacio. Si los datos recuperados son inválidos, se muestran ejemplos temporales y no se sobrescribe la copia existente. No hay migraciones de formatos futuros todavía. Para empezar de cero deliberadamente, en las herramientas del navegador podés eliminar solo la clave `en-casa:shopping:v1` de Local Storage y recargar; esa acción borra la lista local y el historial.
-
-## Etapas pendientes
-
-Con el guardado local completo, proponemos tres etapas para cerrar el MVP: cuentas y familias con Supabase y sus permisos; sincronización compartida y manejo de errores; revisión integral de los flujos familiares. PWA y publicación quedan para después. Esta división puede ajustarse durante la integración.
-
-## Cuentas y familias — cuarta entrega
-
-Seguí [la guía para configurar Supabase](docs/configurar-supabase.md). Incluye crear el proyecto, ejecutar la migración y sus pruebas SQL, configurar el correo y copiar `.env.example` a `.env.local`. No es necesario configurar Supabase para seguir usando la lista local.
-
-El código permite registrarse, ingresar y cerrar sesión; crear una familia; generar una invitación de un uso con vencimiento de 7 días; incorporarse con ella y consultar integrantes. Cada cuenta pertenece a una sola familia. El aislamiento se aplica en PostgreSQL mediante RLS y funciones autorizadas.
-
-**La lista inferior sigue siendo local e independiente de la cuenta.** No se comparte, se importa ni cambia al ingresar o cerrar sesión. Sus datos pueden verlos quienes usen el mismo perfil de navegador. La integración de las compras con Supabase corresponde a la siguiente etapa.
-
-El esquema y sus pruebas de permisos pasaron en un PostgreSQL temporal local con identidades simuladas. Todavía queda probar Auth, correo e invitaciones con cuentas reales en tu proyecto; no se creó ningún servicio ni se publicó la aplicación.
+- [Sincronización: reglas, límites y verificación](docs/sincronizacion.md)

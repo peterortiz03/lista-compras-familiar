@@ -14,6 +14,7 @@ export interface Product {
 }
 
 export interface PendingItem {
+  version?: string
   productId: string
   quantity: number
 }
@@ -25,12 +26,20 @@ export interface ShoppingState {
 }
 
 export interface Purchase {
+  purchasedBy?: string
+  author?: string
   id: string
   productId: string
   name: string
   unit: Unit
   quantity: number
   purchasedAt: string
+}
+
+export interface FamilyContext {
+  userId: string
+  id: string
+  name: string
 }
 
 export interface ProductDraft {

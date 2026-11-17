@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
+import type { FamilyContext } from '../types.ts'
 import type { FormEvent } from 'react'
 import type { Session, SupabaseClient } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase.ts'
 
-export function AccountPanel() {
+export function AccountPanel({ onFamilyChange }: { onFamilyChange: (family: FamilyContext | null) => void }) {
   return <section className="surface mb-7 p-5 sm:p-6" aria-labelledby="account-title">
     <h2 id="account-title" className="text-xl font-bold">Tu cuenta familiar</h2>
-    {supabase ? <Account client={supabase} /> : <p className="mt-2 text-sm text-muted">La lista local ya está disponible. Las cuentas estarán disponibles cuando se complete la conexión con Supabase.</p>}
+    {supabase ? <Account client={supabase} onFamilyChange={onFamilyChange} /> : <p className="mt-2 text-sm text-muted">La lista local ya está disponible. Las cuentas estarán disponibles cuando se complete la conexión con Supabase.</p>}
   </section>
 }
 
-function Account({ client }: { client: SupabaseClient }) {
+function Account({ client, onFamilyChange }: { client: SupabaseClient; onFamilyChange: (family: FamilyContext | null) => void }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [signup, setSignup] = useState(false)
@@ -20,17 +21,23 @@ function Account({ client }: { client: SupabaseClient }) {
   useEffect(() => {
     let active = true
     let receivedEvent = false
+    let previousUser: string | null = null
     const { data } = client.auth.onAuthStateChange((_event, next) => {
       receivedEvent = true
-      if (active) { setSession(next); setLoading(false) }
+      if (active) {
+        if (previousUser !== (next?.user.id ?? null)) onFamilyChange(null)
+        previousUser = next?.user.id ?? null
+        setSession(next); setLoading(false)
+      }
     })
     void client.auth.getSession().then(({ data: current, error: failure }) => {
       if (!active || receivedEvent) return
       if (failure) setError('No pudimos recuperar tu sesión. Intentá ingresar nuevamente.')
+      previousUser = current.session?.user.id ?? null
       setSession(current.session); setLoading(false)
     }).catch(() => { if (active) { setError('No pudimos conectar con el servicio de cuentas.'); setLoading(false) } })
     return () => { active = false; data.subscription.unsubscribe() }
-  }, [client])
+  }, [client, onFamilyChange])
 
   async function authenticate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -54,18 +61,18 @@ function Account({ client }: { client: SupabaseClient }) {
     try {
       const result = await client.auth.signOut({ scope: 'local' })
       if (result.error) setError('No se pudo cerrar la sesión. Intentá de nuevo.')
-      else setSession(null)
+      else { setSession(null); onFamilyChange(null) }
     } catch { setError('No se pudo cerrar la sesión. Revisá la conexión.') }
     finally { setBusy(false) }
   }
 
   return <>
-    <p className="mt-2 text-sm text-muted">Las cuentas y familias se guardan en Supabase. La lista de abajo sigue siendo local: todavía no se comparte ni se importa a tu cuenta.</p>
+    <p className="mt-2 text-sm text-muted">Al ingresar con una familia se muestra su lista compartida. Sin sesión se usa una lista local independiente.</p>
     {error && <p role="alert" className="mt-4 text-sm text-red-800">{error}</p>}
     {message && <p role="status" className="mt-4 text-sm text-forest">{message}</p>}
     {loading ? <p className="mt-4" role="status">Recuperando sesión…</p> : session ? <>
       <div className="mt-4 flex flex-wrap items-center gap-3"><p className="min-w-0 break-all text-sm">{session.user.email}</p><button type="button" className="button-secondary" disabled={busy} onClick={signOut}>Cerrar sesión en este navegador</button></div>
-      <FamilyPanel key={session.user.id} client={client} userId={session.user.id} />
+      <FamilyPanel key={session.user.id} client={client} userId={session.user.id} onFamilyChange={onFamilyChange} />
     </> : <>
       <div className="mt-4 flex flex-wrap gap-2"><button className="button-secondary" type="button" disabled={busy} aria-pressed={!signup} onClick={() => { setSignup(false); setError(''); setMessage('') }}>Ingresar</button><button className="button-secondary" type="button" disabled={busy} aria-pressed={signup} onClick={() => { setSignup(true); setError(''); setMessage('') }}>Crear cuenta</button></div>
       <form key={String(signup)} onSubmit={authenticate} className="mt-4 max-w-md space-y-4">
@@ -81,7 +88,7 @@ function Account({ client }: { client: SupabaseClient }) {
 interface Family { id: string; name: string; owner_id: string }
 interface Member { user_id: string; display_name: string }
 
-function FamilyPanel({ client, userId }: { client: SupabaseClient; userId: string }) {
+function FamilyPanel({ client, userId, onFamilyChange }: { client: SupabaseClient; userId: string; onFamilyChange: (family: FamilyContext | null) => void }) {
   const [family, setFamily] = useState<Family | null>(null)
   const [members, setMembers] = useState<Member[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -101,12 +108,15 @@ function FamilyPanel({ client, userId }: { client: SupabaseClient; userId: strin
           if (response.error) throw response.error
           roster = response.data
         }
-        if (active) { setFamily(result.data); setMembers(roster); setLoaded(true) }
+        if (active) {
+          setFamily(result.data); setMembers(roster); setLoaded(true)
+          onFamilyChange(result.data ? { id: result.data.id, name: result.data.name, userId } : null)
+        }
       } catch { if (active) setError('No pudimos cargar tu familia. Revisá la conexión o la configuración de la base de datos.') }
     }
     void load()
     return () => { active = false }
-  }, [client, refresh])
+  }, [client, refresh, onFamilyChange, userId])
 
   async function action(event: FormEvent<HTMLFormElement>, kind: 'create' | 'join') {
     event.preventDefault()

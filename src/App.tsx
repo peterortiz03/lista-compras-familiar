@@ -1,117 +1,27 @@
-import { useEffect, useState } from 'react'
-import { ProductForm } from './components/ProductForm.tsx'
-import { ShoppingList } from './components/ShoppingList.tsx'
-import { Icon } from './components/Icon.tsx'
-import { PurchaseDialog } from './components/PurchaseDialog.tsx'
-import { PurchaseHistory } from './components/PurchaseHistory.tsx'
+import { useState } from 'react'
+import type { FamilyContext } from './types.ts'
 import { AccountPanel } from './components/AccountPanel.tsx'
-import { loadState, saveState } from './lib/storage.ts'
-import { addProduct, recordPurchase, removePending, updateQuantity } from './lib/shopping.ts'
-import type { Product, ProductDraft } from './types.ts'
+import { ShoppingWorkspace } from './components/ShoppingWorkspace.tsx'
+import { Icon } from './components/Icon.tsx'
 
 export default function App() {
-  const [initial] = useState(() => loadState(() => window.localStorage))
-  const [state, setState] = useState(initial.state)
-  const [storageError, setStorageError] = useState(initial.error)
-  useEffect(() => {
-    // El aviso depende del resultado de escribir en un sistema externo al render.
-    // oxlint-disable-next-line react/set-state-in-effect
-    if (initial.canSave) setStorageError(saveState(() => window.localStorage, state))
-  }, [state, initial.canSave])
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [notice, setNotice] = useState('')
-  const [buyingId, setBuyingId] = useState<string | null>(null)
-  const buyingProduct = state.catalog.find((product) => product.id === buyingId)
-  const buyingItem = state.pending.find((item) => item.productId === buyingId)
-  const editingProduct = state.catalog.find((product) => product.id === editingId)
-  const editingItem = state.pending.find((item) => item.productId === editingId)
-  const editing = editingProduct && editingItem ? { product: editingProduct, quantity: editingItem.quantity } : null
-
-  function handleAdd(draft: ProductDraft): Product | null {
-    const result = addProduct(state, draft, crypto.randomUUID())
-    if (result.kind === 'duplicate') return result.product
-    setState(result.state)
-    setNotice(`${result.product.name} se agregó a la lista.`)
-    return null
-  }
-
-  function handleEdit(product: Product) {
-    setEditingId(product.id)
-    document.getElementById('agregar-producto')?.scrollIntoView({ block: 'start' })
-  }
-
-  function handleSave(productId: string, quantity: number) {
-    setState((current) => updateQuantity(current, productId, quantity))
-    setEditingId(null)
-    setNotice('Cantidad actualizada. Ya está lista para la próxima compra.')
-  }
-
-  function handleRemove(product: Product) {
-    setState((current) => removePending(current, product.id))
-    if (editingId === product.id) setEditingId(null)
-    setNotice(`${product.name} se eliminó de pendientes.`)
-  }
-
-  function handlePurchase(quantity: number) {
-    if (!buyingProduct || !buyingItem) return
-    const id = crypto.randomUUID()
-    const date = new Date().toISOString()
-    setState((current) => recordPurchase(current, buyingProduct.id, quantity, id, date))
-    if (editingId === buyingProduct.id) setEditingId(null)
-    setBuyingId(null)
-    setNotice(`${buyingProduct.name}: compra registrada.${quantity < buyingItem.quantity ? ' El resto sigue pendiente.' : ' Ya no queda pendiente.'}`)
-  }
-
-  return (
-    <div className="min-h-screen">
-      <a href="#contenido" className="skip-link">Ir a la lista</a>
-      <header className="border-b border-line bg-white/80">
-        <div className="mx-auto flex min-h-24 max-w-6xl items-center justify-between gap-3 px-5 sm:px-8">
-          <a href="#" className="flex items-center gap-3 text-ink no-underline" aria-label="En casa, inicio">
-            <span className="flex size-11 items-center justify-center rounded-2xl bg-forest text-white"><Icon name="basket" size={25} /></span>
-            <span><span className="block text-xl font-extrabold tracking-tight">en casa<span className="text-forest">.</span></span><span className="mt-0.5 block text-[11px] font-medium tracking-wide text-muted">LISTA DE COMPRAS FAMILIAR</span></span>
-          </a>
-          <span className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-3 py-2 text-xs font-semibold text-muted"><span className="size-1.5 rounded-full bg-amber-500" />Modo local</span>
-        </div>
-      </header>
-
-      <main id="contenido" className="mx-auto max-w-6xl px-5 pt-8 pb-10 sm:px-8 sm:pt-12">
-        <div className="mb-8 flex flex-col items-start justify-between gap-5 sm:mb-9 sm:flex-row sm:items-end">
-          <div>
-            <p className="mb-3 text-[11px] font-bold tracking-[0.16em] text-forest uppercase">Un poco de orden, todos los días</p>
-            <h1 className="text-[clamp(2rem,5vw,3rem)] leading-[1.12] font-extrabold tracking-[-0.045em]">Lo que falta en casa.</h1>
-            <p className="mt-3 max-w-lg text-sm leading-relaxed text-muted sm:text-base">Anotá lo que hace falta. Llevá la lista. Volvé con todo.</p>
-          </div>
-          <a className="button-primary shrink-0" href="#agregar-producto" onClick={() => setEditingId(null)}><Icon name="plus" size={18} />Agregar producto</a>
-        </div>
-
-        <aside className="mb-7 flex items-start gap-3 rounded-2xl border border-[#e4dcc2] bg-[#f7f2e5] px-4 py-3.5 text-[#655733] sm:px-5" aria-label="Información sobre guardado local">
-          <Icon name="info" size={19} style={{ flexShrink: 0, marginTop: 1 }} />
-          <p className="text-xs leading-relaxed sm:text-sm"><strong>Guardado en este navegador.</strong> La lista, el catálogo y las compras se conservan al recargar si el almacenamiento está disponible. Usá una sola pestaña: todavía no hay sincronización entre pestañas ni dispositivos.</p>
-        </aside>
-        {storageError && <p role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{storageError}</p>}
-
-        <AccountPanel />
-        <div className="mb-7 grid grid-cols-2 gap-3 sm:gap-4">
-          <div className="stat-card"><div><p className="text-xs font-medium text-muted sm:text-sm">Productos pendientes</p><p className="mt-1 text-3xl font-bold tracking-tight">{state.pending.length.toString().padStart(2, '0')}</p></div><span className="stat-icon bg-sage text-forest"><Icon name="basket" size={24} /></span></div>
-          <div className="stat-card"><div><p className="text-xs font-medium text-muted sm:text-sm">En tu catálogo</p><p className="mt-1 text-3xl font-bold tracking-tight">{state.catalog.length.toString().padStart(2, '0')}</p></div><span className="stat-icon bg-[#f4eee4] text-[#997747]"><Icon name="leaf" size={24} /></span></div>
-        </div>
-
-        <div role="status" aria-live="polite" aria-atomic="true" className={notice ? 'mb-5 flex items-start gap-2 rounded-xl border border-[#caddcd] bg-sage px-4 py-3 text-sm text-forest' : 'sr-only'}>{notice && <Icon name="check" size={18} style={{ flexShrink: 0, marginTop: 1 }} />}{notice}</div>
-
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="min-w-0">
-            <ShoppingList state={state} onEdit={handleEdit} onRemove={handleRemove} onBuy={(product) => setBuyingId(product.id)} />
-            <PurchaseHistory history={state.history} />
-          </div>
-          <div className="space-y-5 lg:sticky lg:top-6">
-            <ProductForm key={editingId ?? 'new'} catalog={state.catalog} pendingIds={state.pending.map((item) => item.productId)} editing={editing} onAdd={handleAdd} onSave={handleSave} onEdit={handleEdit} onCancel={() => setEditingId(null)} />
-            <div className="flex items-start gap-3 px-2 py-1"><Icon name="leaf" size={21} style={{ color: '#245c46', flexShrink: 0, marginTop: 2 }} /><div><h2 className="text-sm font-semibold">Una lista que va creciendo</h2><p className="mt-1 text-xs leading-relaxed text-muted">Tus productos quedan en el catálogo, incluso después de comprarlos.</p></div></div>
-          </div>
-        </div>
-        <footer className="mt-10 flex flex-col justify-between gap-2 border-t border-line pt-5 text-xs text-muted sm:flex-row"><p>Hecha para la vida de todos los días.</p><p>Cuarta entrega · Cuentas y familias</p></footer>
-      </main>
-      {buyingProduct && buyingItem && <PurchaseDialog product={buyingProduct} pending={buyingItem.quantity} onSave={handlePurchase} onCancel={() => setBuyingId(null)} />}
-    </div>
-  )
+  const [family, setFamily] = useState<FamilyContext | null>(null)
+  return <div className="min-h-screen">
+    <a href="#contenido" className="skip-link">Ir a la lista</a>
+    <header className="border-b border-line bg-white/80">
+      <div className="mx-auto flex min-h-24 max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-8">
+        <a href="#" className="flex items-center gap-3 text-ink no-underline" aria-label="En casa, inicio"><span className="flex size-11 items-center justify-center rounded-2xl bg-forest text-white"><Icon name="basket" size={25} /></span><span><span className="block text-xl font-extrabold tracking-tight">en casa.</span><span className="text-[11px] text-muted">LISTA DE COMPRAS FAMILIAR</span></span></a>
+        <a href="#cuenta" className="button-secondary">Cuenta y familia</a>
+      </div>
+    </header>
+    <main className="mx-auto max-w-6xl px-5 pt-8 pb-10 sm:px-8 sm:pt-12">
+      <div className="mb-7"><p className="mb-3 text-[11px] font-bold tracking-widest text-forest uppercase">Un poco de orden, todos los días</p><h1 className="text-[clamp(2rem,5vw,3rem)] font-extrabold tracking-tight">Lo que falta en casa.</h1><p className="mt-3 text-sm text-muted">Anotá lo que hace falta. Llevá la lista. Volvé con todo.</p></div>
+      <details id="cuenta" className="mb-6" open={!family}>
+        <summary className="min-h-11 cursor-pointer py-3 font-semibold text-forest">Cuenta y familia{family ? ` · ${family.name}` : ''}</summary>
+        <AccountPanel onFamilyChange={setFamily} />
+      </details>
+      <div id="contenido"><ShoppingWorkspace key={family ? `${family.userId}:${family.id}` : 'local'} family={family} /></div>
+      <footer className="mt-10 border-t border-line pt-5 text-xs text-muted">Quinta entrega · Lista familiar compartida</footer>
+    </main>
+  </div>
 }

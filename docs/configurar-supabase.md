@@ -1,6 +1,6 @@
 # Conectar cuentas y familias con Supabase
 
-Esta guía corresponde a la cuarta entrega. El código está preparado; todavía necesitás crear tu proyecto y comprobar el acceso real. Las cuentas y familias usarán Supabase, pero **la lista, el catálogo y el historial de compras siguen guardados localmente**, sin importación ni sincronización. Ingresar o cerrar sesión no borra ni cambia esa lista local; tampoco la protege de otras personas que usen el mismo perfil del navegador.
+Esta guía corresponde a la configuración inicial de la cuarta entrega. Para el comportamiento actual, completá después [la guía de sincronización](sincronizacion.md) con la migración 0002. Las descripciones de lista local de esta guía reflejan esa cuarta entrega. El código está preparado; todavía necesitás crear tu proyecto y comprobar el acceso real. Las cuentas y familias usarán Supabase, pero **la lista, el catálogo y el historial de compras siguen guardados localmente**, sin importación ni sincronización. Ingresar o cerrar sesión no borra ni cambia esa lista local; tampoco la protege de otras personas que usen el mismo perfil del navegador.
 
 ## 1. Crear tu proyecto
 
@@ -70,4 +70,4 @@ El esquema y sus pruebas se verificaron en un PostgreSQL temporal local con una 
 
 También se comprobó la interfaz en Chrome contra un servidor HTTP local de respuestas simuladas: registro, acceso fallido y exitoso, recuperación de sesión, creación de familia, invitación, incorporación y cierre de sesión. No hubo desbordes a 320, 390 y 1440 px. Esa comprobación valida la interfaz, no el servicio real.
 
-En la siguiente etapa conectaremos productos, pendientes y compras, resolveremos concurrencia y definiremos una importación explícita de la lista local. Las tablas de compras de esta entrega permiten lectura por familia, pero no escritura desde el navegador: las operaciones transaccionales se agregarán con la sincronización.
+La quinta entrega ya conecta productos, pendientes y compras mediante operaciones transaccionales. Después de esta guía aplicá únicamente la migración 0002 y seguí [sincronizacion.md](sincronizacion.md). No se habilitan escrituras directas a las tablas desde el navegador.
