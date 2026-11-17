@@ -1,4 +1,4 @@
-# Cómo funciona la aplicación — Entrega 3
+# Cómo funciona la aplicación — Entrega 4
 
 ## 1. Qué corre y dónde
 
@@ -157,3 +157,23 @@ La copia tiene una versión para poder distinguir cambios de formato futuros. Al
 `try/catch` permite controlar errores, como en Python. Un navegador puede bloquear el almacenamiento o agotar el espacio. Si falla el guardado, la aplicación sigue en memoria y avisa. Si no puede leer o validar una copia, evita sobrescribirla con los ejemplos. Las pruebas usan un objeto pequeño con `getItem` y `setItem`, de modo que podemos simular lectura, escritura y errores sin navegador.
 
 Esto no es todavía una base de datos compartida: cada origen y perfil del navegador tiene su almacenamiento. Usá una sola pestaña para editar; dos pestañas pueden guardar estados distintos y la última escritura reemplaza la anterior. El README explica las limitaciones y cómo probar la recarga. Los textos sobre memoria de las secciones anteriores describen las primeras etapas; esta sección documenta el comportamiento actual.
+
+## 13. Cuentas, familias y permisos (cuarta entrega)
+
+Hasta ahora, navegador y almacenamiento local resolvían toda la aplicación. Ahora incorporamos un servicio que se ejecuta fuera de tu computadora: Supabase ofrece PostgreSQL y Auth. Esta entrega conecta las cuentas y familias; la lista de compras todavía usa el almacenamiento anterior. La separación es temporal y está indicada en pantalla.
+
+**Autenticación** responde quién sos: correo y contraseña se envían por el cliente oficial a Supabase Auth. No guardamos contraseñas en tablas propias. Al ingresar, Auth devuelve una sesión con tokens que el cliente administra y adjunta a las consultas. `onAuthStateChange` avisa cambios; el efecto devuelve una función que cancela la suscripción al desmontar el componente. Las consultas asíncronas descartan respuestas si el componente ya se desmontó.
+
+**Autorización** responde qué podés hacer: estar autenticado no permite ver cualquier familia. RLS (seguridad por fila) filtra los registros desde PostgreSQL según `auth.uid()`, el identificador que obtiene de la sesión verificada. No alcanza con ocultar botones en React: alguien puede enviar consultas fuera de la interfaz.
+
+`families` guarda la familia y su responsable; `family_members` relaciona usuarios con familias. Una clave primaria por usuario impide pertenecer a dos familias en este MVP. Las claves foráneas cumplen un papel parecido a las referencias entre objetos, con validación adicional en la base. Las referencias de compras incluyen la familia para impedir relaciones cruzadas entre dos hogares.
+
+Para crear una familia hay que insertar la familia y su primer integrante. Una función PostgreSQL hace ambas cosas como una operación transaccional: si algo falla, no queda una familia a medias. El cliente la llama con `rpc`, una llamada a una función remota. Las funciones `create_family`, `create_family_invite` y `join_family` derivan el usuario de la sesión: no confían en un identificador de usuario enviado por el formulario.
+
+Estas funciones usan `security definer`: ejecutan con los permisos de quien las creó, por lo que pueden realizar las escrituras controladas que el navegador no puede hacer directamente. Por eso verifican la identidad y sus reglas, tienen un `search_path` fijo y solo se concede ejecución al rol autenticado. La función privada de lectura de membresía evita que una política de integrantes se consulte recursivamente a sí misma.
+
+Una invitación permite una incorporación. Al usarla, PostgreSQL bloquea su fila hasta terminar la transacción; así dos solicitudes no pueden consumirla a la vez. Un bloqueo por usuario también evita dos altas simultáneas en familias distintas. No copiamos datos locales al entrar: esa decisión se implementará explícitamente con la sincronización.
+
+Archivos nuevos: `src/lib/supabase.ts` crea el cliente si hay configuración; `src/components/AccountPanel.tsx` contiene acceso y gestión familiar; `supabase/migrations/0001_accounts_and_families.sql` define tablas, permisos y funciones; `supabase/tests/accounts_and_families.sql` comprueba esas reglas y termina con `ROLLBACK` para descartar datos ficticios. La guía `docs/configurar-supabase.md` conecta estas piezas con tu proyecto real.
+
+Las variables de Vite que empiezan por `VITE_` llegan al navegador. Por eso solo usamos una URL y una clave pública, nunca contraseñas de PostgreSQL ni claves secretas. La clave pública identifica al proyecto; los permisos reales dependen de la sesión y de RLS. Referencias: [Auth con React](https://supabase.com/docs/guides/auth/quickstarts/react), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security) y [funciones PostgreSQL](https://supabase.com/docs/guides/database/functions).

@@ -4,6 +4,7 @@ import { ShoppingList } from './components/ShoppingList.tsx'
 import { Icon } from './components/Icon.tsx'
 import { PurchaseDialog } from './components/PurchaseDialog.tsx'
 import { PurchaseHistory } from './components/PurchaseHistory.tsx'
+import { AccountPanel } from './components/AccountPanel.tsx'
 import { loadState, saveState } from './lib/storage.ts'
 import { addProduct, recordPurchase, removePending, updateQuantity } from './lib/shopping.ts'
 import type { Product, ProductDraft } from './types.ts'
@@ -90,6 +91,7 @@ export default function App() {
         </aside>
         {storageError && <p role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{storageError}</p>}
 
+        <AccountPanel />
         <div className="mb-7 grid grid-cols-2 gap-3 sm:gap-4">
           <div className="stat-card"><div><p className="text-xs font-medium text-muted sm:text-sm">Productos pendientes</p><p className="mt-1 text-3xl font-bold tracking-tight">{state.pending.length.toString().padStart(2, '0')}</p></div><span className="stat-icon bg-sage text-forest"><Icon name="basket" size={24} /></span></div>
           <div className="stat-card"><div><p className="text-xs font-medium text-muted sm:text-sm">En tu catálogo</p><p className="mt-1 text-3xl font-bold tracking-tight">{state.catalog.length.toString().padStart(2, '0')}</p></div><span className="stat-icon bg-[#f4eee4] text-[#997747]"><Icon name="leaf" size={24} /></span></div>
@@ -107,7 +109,7 @@ export default function App() {
             <div className="flex items-start gap-3 px-2 py-1"><Icon name="leaf" size={21} style={{ color: '#245c46', flexShrink: 0, marginTop: 2 }} /><div><h2 className="text-sm font-semibold">Una lista que va creciendo</h2><p className="mt-1 text-xs leading-relaxed text-muted">Tus productos quedan en el catálogo, incluso después de comprarlos.</p></div></div>
           </div>
         </div>
-        <footer className="mt-10 flex flex-col justify-between gap-2 border-t border-line pt-5 text-xs text-muted sm:flex-row"><p>Hecha para la vida de todos los días.</p><p>Tercera entrega · Guardado local</p></footer>
+        <footer className="mt-10 flex flex-col justify-between gap-2 border-t border-line pt-5 text-xs text-muted sm:flex-row"><p>Hecha para la vida de todos los días.</p><p>Cuarta entrega · Cuentas y familias</p></footer>
       </main>
       {buyingProduct && buyingItem && <PurchaseDialog product={buyingProduct} pending={buyingItem.quantity} onSave={handlePurchase} onCancel={() => setBuyingId(null)} />}
     </div>

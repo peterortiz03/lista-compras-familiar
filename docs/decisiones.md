@@ -1,5 +1,20 @@
 # Decisiones del proyecto
 
+## Entrega 4: cuentas y familias (integración preparada)
+
+- Se usa el cliente oficial `@supabase/supabase-js`. Sin URL y clave pública válidas se mantiene el modo local. `.env.example` declara los valores; los archivos privados de entorno siguen excluidos de Git.
+- Autenticación por correo y contraseña, recuperación de sesión y cierre de sesión en este navegador. Supabase gestiona las contraseñas y los tokens; nuestra aplicación no crea una tabla de contraseñas.
+- Una familia por usuario. Quien la crea queda como responsable; cada integrante define su nombre visible. No se incluyen expulsiones, transferencias, salida de familia ni recuperación de contraseñas todavía.
+- Las invitaciones son UUID aleatorios de un solo uso y vencen en siete días. Solo la persona responsable puede generarlas; una nueva reemplaza la anterior. La base bloquea la invitación durante su consumo y serializa altas por usuario para evitar membresías duplicadas.
+- Familias e integrantes se consultan con RLS. Una función privada obtiene la familia de la sesión evitando políticas recursivas. Las escrituras de membresías solo se permiten mediante RPC con identidad verificada y `search_path` vacío.
+- Las tablas de productos, pendientes e historial se preparan con claves foráneas por familia y restricciones de cantidades. Su lectura está protegida por RLS; la escritura desde el cliente permanece cerrada hasta implementar operaciones de compras transaccionales en la siguiente etapa.
+- La unidad del pendiente participa en una clave foránea con el producto para validar enteros en unidades/paquetes sin consultar otra tabla desde un CHECK. El historial conserva nombre y unidad del momento de compra y agrega el autor.
+- El panel de cuentas se mantiene independiente de la lista local. No se importa nada automáticamente ni se presenta el guardado local como información protegida por la cuenta. Cambiar de usuario desmonta el panel familiar para descartar datos de la sesión anterior.
+- Verificado: compilación, lint, trece pruebas existentes y pruebas SQL en PostgreSQL temporal con `auth.uid()` simulado. La configuración real de Supabase, los correos y la prueba integral con sus usuarios quedan pendientes de crear el proyecto. La guía de configuración incluye esos pasos.
+- El recorrido de cuentas se verificó en Chrome con respuestas HTTP simuladas, incluida recuperación de sesión, cierre, creación e incorporación familiar y anchos de 320, 390 y 1440 px. El motor PostgreSQL y el servidor de prueba fueron temporales y no se agregaron al proyecto ni a sus dependencias.
+
+
+
 ## Entrega 3: guardado local
 
 - Se conserva el estado completo en `localStorage`, sin dependencias nuevas. React mantiene el estado activo; al cambiarlo, un efecto guarda una copia JSON. Solo se persisten los datos de negocio, no los filtros, mensajes ni formularios abiertos.

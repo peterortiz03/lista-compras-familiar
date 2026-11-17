@@ -1,6 +1,6 @@
 # Lista de Compras Familiar
 
-**En casa** es una aplicación para organizar las compras del hogar. Esta tercera entrega es una interfaz con guardado local en el navegador, construida con React, TypeScript, Vite y Tailwind CSS.
+**En casa** es una aplicación para organizar las compras del hogar. Esta cuarta entrega incorpora el código de cuentas y familias con Supabase y mantiene la lista con guardado local en el navegador, construida con React, TypeScript, Vite y Tailwind CSS.
 
 ## Requisitos
 
@@ -32,7 +32,7 @@ Abrí la dirección que muestre Vite, normalmente `http://localhost:5173`. Para 
 - Catálogo que crece con el uso y conserva los productos retirados de pendientes.
 - Diseño adaptable a celulares y computadoras, etiquetas accesibles y botones táctiles.
 
-**La lista, el catálogo y el historial se guardan automáticamente en este navegador con localStorage.** Recargar o cerrar la página conserva los cambios si el navegador permite guardarlos. Los ejemplos aparecen solo cuando no hay datos previos. No hay cuentas ni sincronización familiar; usá una sola pestaña para evitar que una versión antigua reemplace cambios de otra.
+**La lista, el catálogo y el historial se guardan automáticamente en este navegador con localStorage.** Recargar o cerrar la página conserva los cambios si el navegador permite guardarlos. Los ejemplos aparecen solo cuando no hay datos previos. Las cuentas y familias requieren configurar Supabase; la lista todavía no se sincroniza ni se asocia a esas cuentas; usá una sola pestaña para evitar que una versión antigua reemplace cambios de otra.
 
 ## Comprobaciones
 
@@ -66,9 +66,9 @@ Este comando requiere haber ejecutado `build` y no publica la aplicación.
 
 ## Próximas entregas
 
-Faltan persistencia compartida, cuentas individuales, familias y sincronización con Supabase. PWA y publicación en Vercel quedan para después. No se incluyen precios, comercios, notificaciones, stock, códigos de barras ni tickets.
+El código de cuentas individuales, familias e invitaciones está preparado. Falta crear el proyecto Supabase y verificar el flujo real de correo y acceso. Después faltan persistencia compartida y sincronización de las compras. PWA y publicación en Vercel quedan para después. No se incluyen precios, comercios, notificaciones, stock, códigos de barras ni tickets.
 
-El próximo paso es preparar cuentas individuales y familias con Supabase, incluyendo permisos de acceso por familia. Después incorporaremos la sincronización y realizaremos una revisión integral del MVP.
+Primero completaremos la configuración y la verificación real de cuentas y familias. Después conectaremos las compras y la sincronización, y realizaremos una revisión integral del MVP.
 
 - [Decisiones funcionales y técnicas](docs/decisiones.md)
 - [Guía de aprendizaje](docs/guia-aprendizaje.md)
@@ -86,3 +86,13 @@ Si aparece un aviso de guardado fallido, los cambios actuales siguen en memoria:
 ## Etapas pendientes
 
 Con el guardado local completo, proponemos tres etapas para cerrar el MVP: cuentas y familias con Supabase y sus permisos; sincronización compartida y manejo de errores; revisión integral de los flujos familiares. PWA y publicación quedan para después. Esta división puede ajustarse durante la integración.
+
+## Cuentas y familias — cuarta entrega
+
+Seguí [la guía para configurar Supabase](docs/configurar-supabase.md). Incluye crear el proyecto, ejecutar la migración y sus pruebas SQL, configurar el correo y copiar `.env.example` a `.env.local`. No es necesario configurar Supabase para seguir usando la lista local.
+
+El código permite registrarse, ingresar y cerrar sesión; crear una familia; generar una invitación de un uso con vencimiento de 7 días; incorporarse con ella y consultar integrantes. Cada cuenta pertenece a una sola familia. El aislamiento se aplica en PostgreSQL mediante RLS y funciones autorizadas.
+
+**La lista inferior sigue siendo local e independiente de la cuenta.** No se comparte, se importa ni cambia al ingresar o cerrar sesión. Sus datos pueden verlos quienes usen el mismo perfil de navegador. La integración de las compras con Supabase corresponde a la siguiente etapa.
+
+El esquema y sus pruebas de permisos pasaron en un PostgreSQL temporal local con identidades simuladas. Todavía queda probar Auth, correo e invitaciones con cuentas reales en tu proyecto; no se creó ningún servicio ni se publicó la aplicación.
