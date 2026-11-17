@@ -219,3 +219,29 @@ El permiso compara la identidad de la sesión con el autor de la compra o el res
 `src/lib/shopping.ts` incorpora las mismas reglas para el modo local. Las propiedades nuevas son opcionales en los tipos locales para leer copias anteriores sin borrarlas; al recibir una instantánea de Supabase exigimos su versión de esquema nueva. La migración 0003 añade columnas y adapta la API sin destruir los datos existentes.
 
 `vercel.json` describe cómo construir la aplicación y dónde encontrar sus archivos. Vercel alojará esos archivos; Supabase seguirá guardando usuarios y datos. Por eso publicar una versión nueva de React no equivale a reiniciar la base de datos. Los cambios SQL requieren una migración aparte. La guía [publicar-vercel.md](publicar-vercel.md) explica el primer despliegue y las actualizaciones posteriores desde GitHub.
+
+## 16. Categoría y detalles de un pendiente (etapa A)
+
+El catálogo describe qué producto conocemos y cómo se clasifica: nombre, unidad y categoría. Un pendiente representa una necesidad concreta: cantidad, nota, urgencia y quién lo incorporó. Por eso “Bifes” puede conservar su categoría Carnes y pescados, mientras la nota “de lomo, finitos” se cambia para una compra particular.
+
+`categories.ts` define las opciones, una sugerencia conservadora por palabras y la agrupación visual. La sugerencia se calcula mientras escribís, pero una selección manual queda fija hasta terminar el alta. Las categorías sin pendientes no se dibujan. Se ordena por urgencia dentro de cada grupo sin modificar el arreglo original.
+
+En TypeScript los campos nuevos son opcionales para leer copias locales antiguas: `category ?? 'Otros'` proporciona una alternativa cuando falta. La validación acepta esa ausencia histórica y rechaza nuevos valores inválidos. No se borra ni se reinicia localStorage.
+
+En Supabase, columnas con valores predeterminados conservan los registros existentes. Un trigger (función ejecutada por la base ante una inserción) obtiene el usuario de `auth.uid()` y copia su nombre visible al pendiente. No confía en un nombre enviado por el navegador. Los antiguos mantienen identificación neutral, sin inventar autor ni momento.
+
+La compra toma una instantánea de la nota antes de reducir el pendiente. Una parcial conserva los detalles de lo que falta; editar solo cantidad no elimina la nota. La versión del pendiente sigue impidiendo guardar un formulario viejo después de un cambio de otro integrante.
+
+La migración 0004 y su aplicación están explicadas en [etapa-a.md](etapa-a.md). Se verificó en una base temporal; la aplicación en producción y la continuación B–D quedan pendientes. La sesión de Auth y la PWA se revisarán en C y D respectivamente: esta etapa no cambia esos mecanismos.
+
+## 17. Favoritos, permisos, sesión e instalación (B–D)
+
+Un favorito es un dato permanente del producto, compartido por la familia. La frecuencia es un cálculo: cuántas compras vigentes lo mencionan. La recencia usa fechas ya disponibles. `suggestions.ts` combina esos datos con la coincidencia del nombre, ordena y limita resultados sin duplicar productos. `share-list.ts` genera texto a partir de los grupos, sin incorporar los nombres de integrantes; `ShareList` solicita el menú del dispositivo o copia el texto.
+
+Una membresía actual no debe ser necesaria para representar una compra antigua. Por eso 0005 conserva el nombre del comprador y referencia su cuenta en lugar de exigir su pertenencia actual. Al quitar la membresía, las políticas dejan de autorizar lecturas. Las funciones de escritura verifican nuevamente la pertenencia después del bloqueo, porque la persona pudo ser eliminada mientras su solicitud esperaba.
+
+`getSession` recupera los tokens que administra el cliente oficial y `onAuthStateChange` avisa ingresos, renovaciones y salidas. No usamos esa información como autorización de servidor: RLS y las funciones SQL verifican la sesión real. `App` espera la resolución de usuario y familia para no mostrar una lista local por unos instantes. Una sesión válida normalmente no requiere ingresar otra vez, pero el usuario puede cerrarla y el navegador puede borrar su almacenamiento.
+
+Un manifiesto web es un archivo JSON que describe cómo se presenta la aplicación instalada: nombre, íconos, colores, dirección inicial y tipo de ventana. No guarda usuarios ni datos de compras. `manifest.webmanifest` y los PNG derivados del logo permiten la instalación en navegadores compatibles. `InstallApp` escucha el evento opcional de instalación; si no existe, se usa el menú del navegador. No añadimos service worker ni almacenamiento offline de las respuestas familiares.
+
+Las instrucciones de migración y aceptación están en [etapas-bcd.md](etapas-bcd.md). La implementación está preparada localmente; la nueva migración y la publicación requieren autorización. La intención de listas especiales sigue registrada como un apartado futuro separado de la lista principal.

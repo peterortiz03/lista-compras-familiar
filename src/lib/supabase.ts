@@ -6,7 +6,7 @@ const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim()
 function configuredClient() {
   if (!url || !key || key.startsWith('sb_secret_')) return null
   try {
-    return createClient(url, key)
+    return createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } })
   } catch {
     // Un dato de configuración incorrecto no debe impedir usar la lista local.
     return null

@@ -6,7 +6,7 @@ import { importProducts, parseMutationResult, parseSharedState } from '../src/li
 test('la respuesta compartida requiere versiones e identifica al autor de compras', () => {
   const state = createInitialState()
   assert.throws(() => parseSharedState(state))
-  const snapshot = { ...state, schemaVersion: 3, catalog: state.catalog.map(product => ({ ...product, active: true, revision: 'catalog-revision-1' })), pending: state.pending.map(item => ({ ...item, version: 'revision-1' })) }
+  const snapshot = { ...state, schemaVersion: 3, featuresVersion: 5, catalog: state.catalog.map(product => ({ ...product, active: true, revision: 'catalog-revision-1' })), pending: state.pending.map(item => ({ ...item, version: 'revision-1' })) }
   assert.equal(parseSharedState(snapshot), snapshot)
   assert.throws(() => parseSharedState({ ...snapshot, history: [{ id: 'p', productId: 'leche', name: 'Leche', quantity: 1, unit: 'litro', purchasedAt: '2026-11-17T12:00:00Z' }] }))
 })

@@ -44,6 +44,7 @@ export function useShoppingData(family: FamilyContext | null) {
     const timeout = window.setTimeout(() => controller.abort(), 12000)
     try {
       const response = await supabase.rpc('get_family_shopping').abortSignal(controller.signal)
+      if (response.error?.code === '42501' && active.current && request === sequence.current) { setState({ catalog: [], pending: [], history: [] }); setReady(false) }
       if (response.error) throw new Error(sharedError(response.error.code))
       const snapshot = parseSharedState(response.data)
       if (active.current && request === sequence.current) {
@@ -83,17 +84,18 @@ export function useShoppingData(family: FamilyContext | null) {
     if (!family) {
       switch (command.type) {
         case 'add': {
-          const result = addProduct(state, command, crypto.randomUUID())
+          const result = addProduct(state, command, crypto.randomUUID(), new Date().toISOString())
           setState(result.state)
           return { kind: result.kind, product: result.product }
         }
-        case 'update': setState(updateQuantity(state, command.productId, command.quantity)); break
+        case 'update': setState(updateQuantity(state, command.productId, command.quantity, command)); break
         case 'remove': setState(removePending(state, command.productId)); break
         case 'buy': setState(recordPurchase(state, command.productId, command.quantity, crypto.randomUUID(), new Date().toISOString())); break
-        case 'catalog_add': setState(createCatalogProduct(state, command.name, command.unit, crypto.randomUUID())); break
-        case 'catalog_update': setState(changeCatalogProduct(state, command.productId, { name: command.name })); break
+        case 'catalog_add': setState(createCatalogProduct(state, command.name, command.unit, crypto.randomUUID(), command.category)); break
+        case 'catalog_update': setState(changeCatalogProduct(state, command.productId, { name: command.name, ...(command.category ? { category: command.category } : {}) })); break
         case 'catalog_archive': setState(changeCatalogProduct(state, command.productId, { active: false })); break
         case 'catalog_restore': setState(changeCatalogProduct(state, command.productId, { active: true })); break
+        case 'catalog_favorite': setState(changeCatalogProduct(state, command.productId, { favorite: command.favorite })); break
         case 'revert_purchase': setState(revertPurchase(state, command.purchaseId, new Date().toISOString())); break
         default: throw new Error('La importación requiere una familia conectada.')
       }

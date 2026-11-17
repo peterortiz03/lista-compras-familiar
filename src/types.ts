@@ -1,3 +1,4 @@
+import type { Category } from './lib/categories.ts'
 export const UNITS = [
   { value: 'unidad', label: 'Unidades', short: 'un.' },
   { value: 'kg', label: 'Kilogramos', short: 'kg' },
@@ -8,6 +9,8 @@ export const UNITS = [
 export type Unit = (typeof UNITS)[number]['value']
 
 export interface Product {
+  favorite?: boolean
+  category?: Category
   active?: boolean
   revision?: string
   id: string
@@ -16,6 +19,11 @@ export interface Product {
 }
 
 export interface PendingItem {
+  note?: string
+  urgent?: boolean
+  addedBy?: string | null
+  addedByName?: string
+  addedAt?: string | null
   version?: string
   productId: string
   quantity: number
@@ -28,6 +36,7 @@ export interface ShoppingState {
 }
 
 export interface Purchase {
+  note?: string
   revertedAt?: string | null
   revertedBy?: string | null
   purchasedBy?: string
@@ -48,6 +57,9 @@ export interface FamilyContext {
 }
 
 export interface ProductDraft {
+  category?: Category
+  note?: string
+  urgent?: boolean
   name: string
   unit: Unit
   quantity: number

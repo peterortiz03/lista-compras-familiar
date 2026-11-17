@@ -15,6 +15,7 @@ export function PurchaseHistory({ history, family, onRevert }: { history: Purcha
       <ul className="mt-4 divide-y divide-line" aria-label="Historial de compras">
         {visible.map((purchase) => <li key={purchase.id} className="flex flex-wrap items-center justify-between gap-2 py-4">
           <div className="min-w-0 flex-1"><p className="break-words font-semibold">{purchase.name}</p><time className="text-xs text-muted" dateTime={purchase.purchasedAt}>{dateFormat.format(new Date(purchase.purchasedAt))}</time>{purchase.author && <p className="break-words text-xs text-muted">Por {purchase.author}</p>}</div>
+          {purchase.note && <p className="w-full break-words text-sm text-muted">{purchase.note}</p>}
           <p className="text-sm font-semibold text-forest">{purchase.quantity.toLocaleString('es-AR')} {UNITS.find((unit) => unit.value === purchase.unit)?.short}</p>
           {purchase.revertedAt ? <p className="w-full text-xs text-muted">Revertida el {dateFormat.format(new Date(purchase.revertedAt))}</p>
             : (!family || family.ownerId === family.userId || purchase.purchasedBy === family.userId) && <button className="button-secondary" type="button" aria-label={`Revertir compra de ${purchase.name}`} onClick={() => void onRevert(purchase)}>Revertir compra</button>}

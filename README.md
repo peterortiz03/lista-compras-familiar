@@ -1,11 +1,13 @@
 # Lista de Compras Familiar
 
+**Actualización A–D:** categorías, notas, autoría, urgencia, favoritos, sugerencias, compartir, administración familiar, acceso persistente y PWA. El usuario confirmó la ejecución de 0004 y 0005 y autorizó la publicación. Ver [efectos y verificaciones](docs/etapas-bcd.md).
+
 **En casa** organiza las compras del hogar con React, TypeScript, Vite, Tailwind CSS y Supabase. La aplicación incluye lista familiar compartida, catálogo administrable y compras completas o parciales con historial y reversión.
 
 ## Requisitos y ejecución en Windows
 
 - Node.js 22.18 o superior compatible con Vite, preferentemente LTS vigente; npm y un navegador moderno.
-- Para compartir: un proyecto Supabase con las tres migraciones aplicadas y `.env.local` configurado. Sin Supabase se puede usar la copia local.
+- Para compartir con este código: un proyecto Supabase con 0001–0005 aplicadas y `.env.local` configurado. El usuario confirmó todas las migraciones en el proyecto actual; sin Supabase se puede usar la copia local.
 
 Desde PowerShell:
 
@@ -17,13 +19,14 @@ npm.cmd run dev
 
 Abrí la dirección que indique Vite, normalmente `http://localhost:5173`; detenelo con `Ctrl+C`. `npm.cmd` evita el bloqueo de `npm.ps1` sin modificar la política de PowerShell. `npm ci` instala las versiones fijadas en `package-lock.json`.
 
-El servidor local debe seguir abierto para cargar la aplicación. Hasta publicar, guardar datos en Supabase no reemplaza el alojamiento de la página ni habilita edición offline.
+El servidor local debe seguir abierto mientras probás en localhost. La versión publicada en Vercel puede usarse con la PC apagada. Los pushes a la rama de producción conectada disparan la actualización automática; esperá el estado Ready antes de probar. La lista compartida necesita conexión.
 
 ## Configuración y actualización
 
 - Primera instalación: [cuentas y familias con Supabase](docs/configurar-supabase.md), incluida la migración 0001.
-- Si ya tenés cuentas: aplicá solo [0002_shared_shopping.sql](supabase/migrations/0002_shared_shopping.sql) en SQL Editor. No repitas 0001 ni borres tablas. Después reiniciá Vite.
+- Instalación nueva: continuá con [0002_shared_shopping.sql](supabase/migrations/0002_shared_shopping.sql) en SQL Editor. No repitas 0001 ni borres tablas. Después reiniciá Vite.
 - Después aplicá [0003_catalog_and_purchase_reversal.sql](supabase/migrations/0003_catalog_and_purchase_reversal.sql) para catálogo e historial administrables. Ejecutá cada migración una sola vez.
+- En una instalación nueva, completá con 0004 y 0005 en orden. En este proyecto ambas ya están aplicadas: no repitas las migraciones. Ver [los efectos de 0005](docs/etapas-bcd.md#migración-0005-efectos-y-aprobación).
 - [Guía de sincronización y recorrido con dos cuentas](docs/sincronizacion.md).
 - [Publicación paso a paso en Vercel, costos y actualizaciones](docs/publicar-vercel.md).
 
@@ -62,7 +65,7 @@ npm.cmd run lint
 npm.cmd test
 ```
 
-Son diecinueve casos de lógica con el ejecutor de Node. También hay pruebas transaccionales de permisos y compras en `supabase/tests/`, para SQL Editor como administrador, con `ROLLBACK` final. No se agregó un framework de pruebas ni dependencias nuevas en esta entrega.
+Son 24 casos de lógica con el ejecutor de Node. También hay pruebas transaccionales de permisos y compras en `supabase/tests/`, para SQL Editor como administrador, con `ROLLBACK` final. No se agregó un framework de pruebas ni dependencias nuevas en esta entrega.
 
 Se probaron las migraciones en PostgreSQL temporal y la interfaz con dos cuentas aisladas y un servidor local conectado a ese motor. La API real reconoce la función nueva y rechaza el acceso anónimo; el usuario confirmó la configuración de cuentas y la ejecución de 0002. Eso no equivale a haber accedido a sus sesiones ni probado compras reales en su proyecto.
 
@@ -85,3 +88,12 @@ La publicación queda preparada con `vercel.json` y su guía; requiere crear la 
 5. Con otro integrante, comprobá que solo pueda revertir sus propias compras. El responsable puede revertir las de todos en su familia. Los permisos se verifican también en PostgreSQL.
 
 Se probaron las tres migraciones y sus suites SQL en PostgreSQL temporal, diecinueve pruebas Node y el recorrido de Catálogo/Historial en Chrome con dos cuentas y ese PostgreSQL. Crear, quitar, recuperar y renombrar sincronizó las sugerencias; revertir restableció cantidades y respetó permisos. Sin excepciones ni desbordes a 320, 390 y 1440 px. Las pruebas no modificaron compras reales.
+
+## Funciones nuevas B–D
+
+- Estrellas compartidas en Catálogo, sugerencias compactas con frecuencia/recencia y compartir lista sin datos de integrantes.
+- Responsable: quitar integrantes y gestionar invitación activa. Integrantes: abandonar. Se conservan cuentas y compras históricas; no se permite salir al responsable.
+- Recuperación de sesión antes de mostrar la lista, sin destello de la copia local.
+- Manifiesto e íconos para instalación PWA desde un navegador compatible. Se necesita conexión; no hay service worker, cola offline ni caché de respuestas familiares.
+
+Las pruebas actuales son 24 casos Node, suites SQL y comprobaciones de navegador descritas en [etapas-bcd.md](docs/etapas-bcd.md). El usuario confirmó 0005 y autorizó commit, push y publicación. No repitas las migraciones; después del despliegue verificá las funciones con las cuentas reales.

@@ -3,22 +3,31 @@ import type { FormEvent } from 'react'
 import { UNITS } from '../types.ts'
 import type { Product, ProductDraft, Unit } from '../types.ts'
 import { cleanName, normalizeName, quantityError } from '../lib/shopping.ts'
+import { CATEGORIES, suggestCategory } from '../lib/categories.ts'
+import type { Category } from '../lib/categories.ts'
+import { suggestProducts } from '../lib/suggestions.ts'
+import type { PendingItem, Purchase } from '../types.ts'
 import { Icon } from './Icon.tsx'
 
 interface ProductFormProps {
   catalog: Product[]
+  history: Purchase[]
+  pending: PendingItem[]
   pendingIds: string[]
-  editing: { product: Product; quantity: number } | null
+  editing: { product: Product; quantity: number; note?: string; urgent?: boolean } | null
   onAdd: (draft: ProductDraft) => Promise<Product | null>
-  onSave: (productId: string, quantity: number) => Promise<void>
+  onSave: (productId: string, quantity: number, note: string, urgent: boolean) => Promise<void>
   onEdit: (product: Product) => void
   onCancel: () => void
 }
 
-export function ProductForm({ catalog, pendingIds, editing, onAdd, onSave, onEdit, onCancel }: ProductFormProps) {
+export function ProductForm({ catalog, history, pending, pendingIds, editing, onAdd, onSave, onEdit, onCancel }: ProductFormProps) {
   const [name, setName] = useState(editing?.product.name ?? '')
   const [quantity, setQuantity] = useState(String(editing?.quantity ?? 1))
   const [unit, setUnit] = useState<Unit>(editing?.product.unit ?? 'unidad')
+  const [note, setNote] = useState(editing?.note ?? '')
+  const [urgent, setUrgent] = useState(editing?.urgent ?? false)
+  const [category, setCategory] = useState<Category | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [duplicate, setDuplicate] = useState<Product | null>(null)
@@ -28,7 +37,7 @@ export function ProductForm({ catalog, pendingIds, editing, onAdd, onSave, onEdi
   const selected = catalog.find((product) => normalizeName(product.name) === normalizeName(name))
   const activeUnit = selected?.unit ?? unit
   const suggestions = !editing
-    ? catalog.filter((product) => product.active !== false && normalizeName(product.name).includes(normalizeName(name))).slice(0, 5)
+    ? suggestProducts(catalog, history, name, 5, pending)
     : []
 
   useEffect(() => {
@@ -63,14 +72,14 @@ export function ProductForm({ catalog, pendingIds, editing, onAdd, onSave, onEdi
     setBusy(true)
     try {
       if (editing) {
-        await onSave(editing.product.id, amount)
+        await onSave(editing.product.id, amount, note, urgent)
       } else {
-        const existing = await onAdd({ name, quantity: amount, unit: activeUnit })
+        const existing = await onAdd({ name, quantity: amount, unit: activeUnit, note, urgent, category: selected?.category ?? category ?? suggestCategory(name) })
         if (existing) {
           setDuplicate(existing)
           return
         }
-        setName('')
+        setName(''); setNote(''); setUrgent(false); setCategory(null)
         setQuantity('1')
         setUnit('unidad')
         focusAfterSave.current = true
@@ -96,12 +105,12 @@ export function ProductForm({ catalog, pendingIds, editing, onAdd, onSave, onEdi
             <input ref={nameRef} id="product-name" className="field" placeholder="Ej.: Manzanas" value={name} maxLength={80} readOnly={!!editing} autoComplete="off" aria-describedby={error ? 'form-error' : undefined} onChange={(event) => { setName(event.target.value); setError(''); setDuplicate(null) }} />
             {suggestions.length > 0 && (
               <div className="mt-2 overflow-hidden rounded-xl border border-line bg-white">
-                <p className="px-3 pt-3 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase">Productos conocidos</p>
+                <p className="px-3 pt-3 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase">{name ? 'Coincidencias' : 'Favoritos y compras habituales'}</p>
                 <ul aria-label="Sugerencias de productos">
                   {suggestions.map((product) => (
                     <li key={product.id}>
                       <button type="button" className="flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-sage" onClick={() => { setName(product.name); setUnit(product.unit); setDuplicate(null); quantityRef.current?.focus() }}>
-                        <span className="font-medium">{product.name}</span>
+                        <span className="font-medium">{product.favorite ? '★ ' : ''}{product.name}</span>
                         <span className="text-xs text-muted">{pendingIds.includes(product.id) ? 'Ya pendiente' : UNITS.find((entry) => entry.value === product.unit)?.label}</span>
                       </button>
                     </li>
@@ -122,11 +131,14 @@ export function ProductForm({ catalog, pendingIds, editing, onAdd, onSave, onEdi
               </select>
             </div>
           </div>
+          {!selected && !editing && <div><label className="field-label" htmlFor="product-category">Categoría sugerida (podés cambiarla)</label><select id="product-category" className="field" value={category ?? suggestCategory(name)} onChange={event => setCategory(event.target.value as Category)}>{CATEGORIES.map(entry => <option key={entry}>{entry}</option>)}</select></div>}
+          <div><label className="field-label" htmlFor="product-note">Nota opcional</label><input id="product-note" className="field" value={note} maxLength={300} placeholder="Ej.: cortados finitos" onChange={event => setNote(event.target.value)} /></div>
+          <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" className="size-5" checked={urgent} onChange={event => setUrgent(event.target.checked)} />Urgente</label>
           <p id="quantity-help" className="text-xs leading-relaxed text-muted">{selected ? 'La unidad es la del producto guardado en el catálogo. ' : ''}Unidades y paquetes: enteros. Kg y litros: hasta 3 decimales (ej.: 1,5).</p>
           {error && <p id="form-error" role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}
           {duplicate && (
             <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-              <p><strong>{duplicate.name}</strong> ya está pendiente. Podés editar su cantidad.</p>
+              <p><strong>{duplicate.name}</strong> ya está pendiente. Podés editar su cantidad y nota.</p>
               <button type="button" className="mt-2 min-h-11 font-bold underline underline-offset-4" onClick={() => onEdit(duplicate)}>Editar cantidad existente <span aria-hidden="true">→</span></button>
             </div>
           )}

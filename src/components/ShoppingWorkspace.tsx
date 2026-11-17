@@ -9,9 +9,10 @@ import { ShoppingList } from './ShoppingList.tsx'
 import { PurchaseDialog } from './PurchaseDialog.tsx'
 import { PurchaseHistory } from './PurchaseHistory.tsx'
 import { Icon } from './Icon.tsx'
+import { ShareList } from './ShareList.tsx'
 import { CatalogPanel } from './CatalogPanel.tsx'
 
-interface Selection { product: Product; quantity: number; version?: string }
+interface Selection { product: Product; quantity: number; version?: string; note?: string; urgent?: boolean }
 
 export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) {
   const { state, error, ready, busy, lastSync, refresh, mutate } = useShoppingData(family)
@@ -23,7 +24,7 @@ export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) 
 
   function select(product: Product): Selection | null {
     const item = state.pending.find(entry => entry.productId === product.id)
-    return item ? { product, quantity: item.quantity, version: item.version } : null
+    return item ? { product, quantity: item.quantity, version: item.version, note: item.note, urgent: item.urgent } : null
   }
   function handleEdit(product: Product) {
     setEditing(select(product))
@@ -35,8 +36,8 @@ export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) 
     setNotice(`${draft.name} se agregó a la lista.`); setOperationError('')
     return null
   }
-  async function handleSave(productId: string, quantity: number) {
-    await mutate({ type: 'update', productId, quantity, version: editing?.version })
+  async function handleSave(productId: string, quantity: number, note: string, urgent: boolean) {
+    await mutate({ type: 'update', productId, quantity, note, urgent, version: editing?.version })
     setEditing(null); setNotice('Cantidad actualizada.'); setOperationError('')
   }
   async function handleRemove(product: Product) {
@@ -83,6 +84,7 @@ export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) 
     {operationError && <p role="alert" className="mb-4 text-sm text-red-800">{operationError}</p>}
     <p role="status" aria-live="polite" className={notice ? 'mb-4 rounded-xl bg-sage p-3 text-sm text-forest' : 'sr-only'}>{notice}</p>
     <nav aria-label="Secciones de compras" className="mb-5 flex flex-wrap gap-3">{([{ id: 'list', label: 'Lista' }, { id: 'catalog', label: 'Catálogo' }, { id: 'history', label: 'Historial' }] as const).map(entry => <button key={entry.id} className={view === entry.id ? 'button-primary' : 'button-secondary'} type="button" aria-pressed={view === entry.id} onClick={() => { setView(entry.id); setEditing(null); setOperationError('') }}>{entry.label}</button>)}</nav>
+    {view === 'list' && <ShareList state={state} />}
     {view === 'list' && <a href="#agregar-producto" className="button-primary mb-5" onClick={event => { if (disabled) event.preventDefault(); else setEditing(null) }} aria-disabled={disabled}><Icon name="plus" size={18} />Agregar faltante</a>}
     {family && ready && state.catalog.length === 0 && <div className="surface mb-5 p-4"><p className="text-sm text-muted">La familia empieza vacía. Podés agregar productos o copiar el catálogo y los pendientes locales. El historial anterior queda en este navegador.</p><button className="button-secondary mt-3" disabled={disabled} onClick={handleImport}>Importar catálogo y pendientes locales</button></div>}
     <div className="mb-6 grid grid-cols-2 gap-3">
@@ -92,7 +94,7 @@ export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) 
     <fieldset disabled={disabled} className="min-w-0">
       {view === 'catalog' ? <CatalogPanel products={state.catalog} onAction={catalogAction} /> : view === 'history' ? <PurchaseHistory history={state.history} family={family} onRevert={handleRevert} /> : <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0"><ShoppingList state={state} onEdit={handleEdit} onRemove={handleRemove} onBuy={product => setBuying(select(product))} /></div>
-        <div className="min-w-0 lg:sticky lg:top-6"><ProductForm key={editing?.product.id ?? 'new'} catalog={state.catalog} pendingIds={state.pending.map(item => item.productId)} editing={editing} onAdd={handleAdd} onSave={handleSave} onEdit={handleEdit} onCancel={() => setEditing(null)} /></div>
+        <div className="min-w-0 lg:sticky lg:top-6"><ProductForm key={editing?.product.id ?? 'new'} catalog={state.catalog} history={state.history} pending={state.pending} pendingIds={state.pending.map(item => item.productId)} editing={editing} onAdd={handleAdd} onSave={handleSave} onEdit={handleEdit} onCancel={() => setEditing(null)} /></div>
       </div>}
     </fieldset>
     {buying && <PurchaseDialog product={buying.product} pending={buying.quantity} onSave={handlePurchase} onCancel={() => setBuying(null)} />}

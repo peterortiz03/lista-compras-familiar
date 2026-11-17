@@ -1,5 +1,7 @@
 # Conectar cuentas y familias con Supabase
 
+Actualización: el usuario confirmó 0004 y 0005 (favoritos y administración) y autorizó la publicación; revisá [etapas-bcd.md](etapas-bcd.md). No repitas las migraciones en el proyecto actual.
+
 Para una instalación actual, esta guía prepara 0001; continuá luego con 0002 según [sincronizacion.md](sincronizacion.md) y 0003 para Catálogo e Historial. Ejecutá cada migración una vez y en orden. La [guía de Vercel](publicar-vercel.md) explica la publicación posterior.
 
 Esta guía corresponde a la configuración inicial de la cuarta entrega. Para el comportamiento actual, completá después [la guía de sincronización](sincronizacion.md) con la migración 0002. Las descripciones de lista local de esta guía reflejan esa cuarta entrega. El código está preparado; todavía necesitás crear tu proyecto y comprobar el acceso real. Las cuentas y familias usarán Supabase, pero **la lista, el catálogo y el historial de compras siguen guardados localmente**, sin importación ni sincronización. Ingresar o cerrar sesión no borra ni cambia esa lista local; tampoco la protege de otras personas que usen el mismo perfil del navegador.

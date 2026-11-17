@@ -1,6 +1,6 @@
 # Publicar En casa en Vercel
 
-El proyecto está preparado para desplegarse desde GitHub. Esta guía no significa que ya esté publicado: necesitás crear tu cuenta de Vercel y conectar el repositorio. No hace falta instalar la CLI ni contratar un dominio.
+La aplicación ya está publicada en Vercel. Los pasos de creación se conservan para una instalación nueva. Para la actualización A–D, el usuario confirmó 0005 y autorizó la publicación; ver [las verificaciones](etapas-bcd.md). Con GitHub conectado a main, un push actualiza la publicación automáticamente. No hace falta instalar la CLI ni contratar un dominio.
 
 ## 1. Costos: con qué empezar
 
@@ -13,7 +13,7 @@ Se puede empezar sin pagar por el alojamiento y la base de datos dentro de esos 
 
 ## 2. Preparar Supabase
 
-Ya deberías tener 0001 y 0002 aplicadas. Ejecutá también, una sola vez, [`0003_catalog_and_purchase_reversal.sql`](../supabase/migrations/0003_catalog_and_purchase_reversal.sql) en SQL Editor. No repitas las anteriores ni borres tablas. Conserva los datos y agrega catálogo activo, revisiones y reversión de compras.
+En este proyecto el usuario confirmó 0001–0005; no las repitas. Los efectos de [`0005_favorites_family_admin.sql`](../supabase/migrations/0005_favorites_family_admin.sql) y el procedimiento están en [etapas-bcd.md](etapas-bcd.md). Para una instalación nueva, las migraciones se ejecutan en orden, con aprobación previa y sin borrar tablas.
 
 Probá localmente las vistas **Lista**, **Catálogo** e **Historial**. El responsable puede revertir cualquier compra de su familia; los integrantes solo las propias. Si una compra estaba mal, revertirla devuelve su cantidad a pendientes y la oculta del historial habitual, manteniéndola en la vista de revertidas.
 
@@ -75,7 +75,7 @@ No hacen falta comodines amplios para esta primera publicación. Probá de nuevo
 
 Los datos de Supabase son los mismos al usar localhost o la URL publicada. La **copia local** del navegador, en cambio, pertenece a cada origen: la de localhost no aparece automáticamente en `vercel.app`. Si necesitás importarla, hacelo desde localhost con la cuenta familiar y una familia vacía, según [sincronizacion.md](sincronizacion.md). No importes ejemplos por accidente.
 
-Esta publicación es una aplicación web. No implementa todavía una PWA con edición offline, ni la publicación por sí sola la agrega a una tienda de aplicaciones.
+Después de publicar esta actualización, la web tendrá manifiesto e íconos para instalarse como PWA desde un navegador compatible. En Android/Chrome usá Instalar o el menú del navegador; en iPhone/Safari, Compartir → Agregar a pantalla de inicio. No hay sincronización offline ni publicación en tiendas. Seguí [las comprobaciones de instalación](etapas-bcd.md#d-pwa-instalable).
 
 ## 7. Seguir cambiando después de publicar
 

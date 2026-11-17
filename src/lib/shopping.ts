@@ -1,4 +1,11 @@
 import type { ProductDraft, ShoppingState, Unit } from '../types.ts'
+import { isCategory } from './categories.ts'
+import type { Category } from './categories.ts'
+
+export function cleanNote(note: string): string {
+  if (note.length > 300) throw new Error('La nota admite hasta 300 caracteres.')
+  return note.trim()
+}
 
 export function cleanName(name: string): string {
   return name.trim().replace(/\s+/g, ' ')
@@ -22,12 +29,14 @@ export function quantityError(quantity: number, unit: Unit): string | null {
   return null
 }
 
-export function addProduct(state: ShoppingState, draft: ProductDraft, newId: string) {
+export function addProduct(state: ShoppingState, draft: ProductDraft, newId: string, addedAt: string | null = null) {
   const name = cleanName(draft.name)
   if (!name || name.length > 80) throw new Error('El nombre debe tener entre 1 y 80 caracteres.')
 
   const existing = state.catalog.find((product) => normalizeName(product.name) === normalizeName(name))
-  const product = existing?.active === false ? { ...existing, active: true } : existing ?? { id: newId, name, unit: draft.unit }
+  if (draft.category !== undefined && !isCategory(draft.category)) throw new Error('Categoría inválida.')
+  const note = cleanNote(draft.note ?? '')
+  const product = existing?.active === false ? { ...existing, active: true } : existing ?? { id: newId, name, unit: draft.unit, ...(draft.category ? { category: draft.category } : {}) }
   const error = quantityError(draft.quantity, product.unit)
   if (error) throw new Error(error)
 
@@ -43,25 +52,27 @@ export function addProduct(state: ShoppingState, draft: ProductDraft, newId: str
     state: {
       ...state,
       catalog: existing ? catalog : [...catalog, product],
-      pending: [...state.pending, { productId: product.id, quantity: draft.quantity }],
+      pending: [...state.pending, { productId: product.id, quantity: draft.quantity, note, urgent: draft.urgent ?? false, addedByName: 'Este dispositivo', addedAt }],
     },
   }
 }
 
-export function createCatalogProduct(state: ShoppingState, name: string, unit: Unit, id: string): ShoppingState {
+export function createCatalogProduct(state: ShoppingState, name: string, unit: Unit, id: string, category?: Category): ShoppingState {
+  if (category !== undefined && !isCategory(category)) throw new Error('Categoría inválida.')
   const clean = cleanName(name)
   if (!clean || clean.length > 80) throw new Error('El nombre debe tener entre 1 y 80 caracteres.')
   if (state.catalog.some(product => normalizeName(product.name) === normalizeName(clean))) throw new Error('Ya existe ese nombre. Revisá los productos quitados y recuperalo si corresponde.')
-  return { ...state, catalog: [...state.catalog, { id, name: clean, unit, active: true }] }
+  return { ...state, catalog: [...state.catalog, { id, name: clean, unit, active: true, ...(category ? { category } : {}) }] }
 }
 
-export function changeCatalogProduct(state: ShoppingState, productId: string, change: { name: string } | { active: boolean }): ShoppingState {
+export function changeCatalogProduct(state: ShoppingState, productId: string, change: { name: string; category?: Category } | { active: boolean } | { favorite: boolean }): ShoppingState {
+  if ('category' in change && change.category !== undefined && !isCategory(change.category)) throw new Error('Categoría inválida.')
   if (!state.catalog.some(product => product.id === productId)) throw new Error('Producto inexistente.')
   if ('name' in change) {
     const name = cleanName(change.name)
     if (!name || name.length > 80) throw new Error('El nombre debe tener entre 1 y 80 caracteres.')
     if (state.catalog.some(product => product.id !== productId && normalizeName(product.name) === normalizeName(name))) throw new Error('Ya existe ese nombre en el catálogo.')
-    change = { name }
+    change = { ...change, name }
   }
   return { ...state, catalog: state.catalog.map(product => product.id === productId ? { ...product, ...change } : product) }
 }
@@ -79,12 +90,12 @@ export function revertPurchase(state: ShoppingState, purchaseId: string, date: s
   return {
     ...state,
     pending: pending ? state.pending.map(entry => entry.productId === purchase.productId ? { ...entry, quantity } : entry)
-      : [...state.pending, { productId: purchase.productId, quantity }],
+      : [...state.pending, { productId: purchase.productId, quantity, note: purchase.note ?? '', addedByName: 'Este dispositivo', addedAt: date }],
     history: state.history.map(entry => entry.id === purchaseId ? { ...entry, revertedAt: date } : entry),
   }
 }
 
-export function updateQuantity(state: ShoppingState, productId: string, quantity: number): ShoppingState {
+export function updateQuantity(state: ShoppingState, productId: string, quantity: number, details: { note?: string; urgent?: boolean } = {}): ShoppingState {
   const product = state.catalog.find((entry) => entry.id === productId)
   if (!product || !state.pending.some((item) => item.productId === productId)) {
     throw new Error('Este producto ya no está pendiente.')
@@ -93,7 +104,7 @@ export function updateQuantity(state: ShoppingState, productId: string, quantity
   if (error) throw new Error(error)
   return {
     ...state,
-    pending: state.pending.map((item) => item.productId === productId ? { ...item, quantity } : item),
+    pending: state.pending.map((item) => item.productId === productId ? { ...item, quantity, ...(details.note !== undefined ? { note: cleanNote(details.note) } : {}), ...(details.urgent !== undefined ? { urgent: details.urgent } : {}) } : item),
   }
 }
 
@@ -116,6 +127,6 @@ export function recordPurchase(state: ShoppingState, productId: string, quantity
     pending: remaining === 0
       ? state.pending.filter((entry) => entry.productId !== productId)
       : state.pending.map((entry) => entry.productId === productId ? { ...entry, quantity: remaining / 1000 } : entry),
-    history: [{ id, productId, name: product.name, unit: product.unit, quantity, purchasedAt }, ...state.history],
+    history: [{ id, productId, name: product.name, unit: product.unit, quantity, purchasedAt, note: pending.note ?? '' }, ...state.history],
   }
 }

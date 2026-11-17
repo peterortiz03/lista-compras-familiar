@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node --test tests/shopping.test.ts tests/storage.test.ts tests/shared-shopping.test.ts tests/catalog-history.test.ts"
+    "test": "node --test tests/shopping.test.ts tests/storage.test.ts tests/shared-shopping.test.ts tests/catalog-history.test.ts tests/details.test.ts tests/suggestions-share.test.ts"
   },
   "engines": {
     "node": ">=22.18.0"

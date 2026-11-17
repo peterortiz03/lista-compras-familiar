@@ -9,7 +9,8 @@ test('agregar incorpora el producto al catálogo y a pendientes sin mutar el est
   assert.equal(result.kind, 'added')
   assert.equal(result.product.name, 'Yerba mate')
   assert.equal(result.state.catalog.length, initial.catalog.length + 1)
-  assert.deepEqual(result.state.pending.at(-1), { productId: 'yerba', quantity: 2 })
+  assert.equal(result.state.pending.at(-1)?.productId, 'yerba')
+  assert.equal(result.state.pending.at(-1)?.quantity, 2)
   assert.equal(initial.pending.length, 5)
 })
 
@@ -66,7 +67,7 @@ test('compra parcial resta exactamente y agrega una instantánea al historial si
   const initial = updateQuantity(createInitialState(), 'leche', 0.3)
   const result = recordPurchase(initial, 'leche', 0.1, 'compra-1', '2026-11-16T20:00:00.000Z')
   assert.equal(result.pending.find((item) => item.productId === 'leche')?.quantity, 0.2)
-  assert.deepEqual(result.history[0], { id: 'compra-1', productId: 'leche', name: 'Leche', unit: 'litro', quantity: 0.1, purchasedAt: '2026-11-16T20:00:00.000Z' })
+  assert.deepEqual(result.history[0], { id: 'compra-1', productId: 'leche', name: 'Leche', unit: 'litro', quantity: 0.1, note: '', purchasedAt: '2026-11-16T20:00:00.000Z' })
   assert.equal(initial.history.length, 0)
   assert.equal(initial.pending[0].quantity, 0.3)
 })

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Product, ShoppingState } from '../types.ts'
 import { UNITS } from '../types.ts'
-import { normalizeName } from '../lib/shopping.ts'
+import { groupPending } from '../lib/categories.ts'
 import { Icon } from './Icon.tsx'
 
 interface ShoppingListProps {
@@ -15,10 +15,7 @@ const formatQuantity = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 3
 
 export function ShoppingList({ state, onEdit, onRemove, onBuy }: ShoppingListProps) {
   const [query, setQuery] = useState('')
-  const items = state.pending.flatMap((item) => {
-    const product = state.catalog.find((entry) => entry.id === item.productId)
-    return product && normalizeName(product.name).includes(normalizeName(query)) ? [{ ...item, product }] : []
-  })
+  const groups = groupPending(state, query)
 
   return (
     <section className="surface overflow-hidden" aria-labelledby="pending-title">
@@ -33,13 +30,17 @@ export function ShoppingList({ state, onEdit, onRemove, onBuy }: ShoppingListPro
           <input id="pending-search" className="field pl-11" type="search" placeholder="Buscar en pendientes…" value={query} onChange={(event) => setQuery(event.target.value)} />
         </div>
       </div>
-      {items.length > 0 ? (
+      {groups.length > 0 ? (
         <ul className="divide-y divide-line" aria-label="Productos pendientes">
-          {items.map(({ product, quantity }) => (
+          {groups.map(group => <li key={group.category}>
+            <h3 className="bg-sage px-5 py-2 text-sm font-semibold text-forest">{group.category}</h3>
+            <ul className="divide-y divide-line">{group.items.map(({ product, quantity, note, urgent, addedByName, addedAt }) => (
             <li key={product.id} className="group flex items-center gap-3 px-4 py-4 sm:gap-4 sm:px-6 sm:py-5">
               <button className="buy-button" type="button" aria-label={`Registrar compra de ${product.name}`} title="Registrar compra completa o parcial" onClick={() => onBuy(product)}><Icon name="check" size={19} /></button>
               <div className="min-w-0 flex-1">
-                <h3 className="break-words text-[15px] font-semibold sm:text-base">{product.name}</h3>
+                <h3 className="break-words text-[15px] font-semibold sm:text-base">{product.name}{urgent && <span className="ml-2 text-xs font-semibold text-amber-800">Urgente</span>}</h3>
+                {note && <p className="mt-1 break-words text-sm text-muted">{note}</p>}
+                <p className="mt-1 text-[11px] text-muted">Agregado por {addedByName ?? 'Integrante anterior'}{addedAt && <> · <time dateTime={addedAt}>{new Date(addedAt).toLocaleDateString('es-AR')}</time></>}</p>
                 <p className="mt-1 text-xs text-muted">{UNITS.find((entry) => entry.value === product.unit)?.label}</p>
               </div>
               <button type="button" className="quantity-button" aria-label={`Editar cantidad de ${product.name}: ${formatQuantity.format(quantity)} ${product.unit}`} onClick={() => onEdit(product)}>
@@ -48,7 +49,7 @@ export function ShoppingList({ state, onEdit, onRemove, onBuy }: ShoppingListPro
               </button>
               <button type="button" className="icon-button text-muted hover:bg-red-50 hover:text-red-700" aria-label={`Eliminar ${product.name} de pendientes`} title="Eliminar de pendientes" onClick={() => onRemove(product)}><Icon name="trash" size={18} /></button>
             </li>
-          ))}
+          ))}</ul></li>)}
         </ul>
       ) : (
         <div className="px-6 py-14 text-center">

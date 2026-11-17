@@ -1,5 +1,31 @@
 # Decisiones del proyecto
 
+## B–D: 0005 aplicada y publicación autorizada
+
+- Favoritos explícitos compartidos; frecuencia y recencia se calculan con historial no revertido y fechas de pendientes. La lista de sugerencias es única y limitada a cinco; no se confunden estadísticas con estrellas elegidas manualmente.
+- Compartir usa Web Share y portapapeles con alternativa manual. El texto agrupa por categorías e incluye unidades, nota y urgencia; no añade autoría ni identificadores y no envía mensajes por sí solo.
+- Salida/eliminación quitan solo la membresía. El historial conserva una instantánea del nombre y referencia la cuenta Auth. La migración no elimina registros por sí sola; los cambios de membresía se ejecutan solo ante confirmación del usuario.
+- Revocar acceso se comprueba en SQL incluso después de esperar un bloqueo. El cliente vacía datos al recibir rechazo y revisa la familia periódicamente. El responsable no puede eliminarse ni abandonar sin transferencia, que no se implementa.
+- La sesión la persiste y renueva el SDK; se espera su recuperación y la familia antes de mostrar un espacio de compras. Se mantiene cierre explícito y no se almacenan contraseñas manualmente.
+- El manifiesto y los íconos hacen instalable la web sin agregar caché. No se incorpora service worker porque no se requiere para esta instalación y no queremos servir datos privados desde caché ni prometer uso offline.
+- Se mantiene el sobre histórico schemaVersion 3 y se agregan capacidades con featuresVersion 5. Es necesario para que el cliente ya publicado tolere campos nuevos; las capacidades aditivas futuras pueden ampliarse sin cambiar el contrato base.
+- Validado con 24 pruebas Node, PostgreSQL temporal, dos cuentas simuladas en Chrome y diagnóstico normal de instalación sin errores. El usuario confirmó la ejecución de 0005 y autorizó commit, push y publicación. Quedan las pruebas de aceptación con cuentas reales después del despliegue.
+
+
+
+## Etapa A: decisiones originales (0004 ya aplicada por el usuario)
+
+- Se reutilizan la arquitectura y las vistas. La categoría pertenece al catálogo; nota, urgencia y autoría pertenecen al pendiente; la compra copia su nota. No se guardan categorías por cada fila pendiente.
+- Taxonomía inicial fija de 14 categorías. Los antiguos pasan a Otros. La sugerencia se calcula con palabras conocidas, sin servicios externos y sin sobrescribir la selección manual.
+- Notas hasta 300 caracteres. Vaciar una nota es explícito; una actualización antigua que omita ese campo conserva su valor. La compra parcial no cambia los detalles del restante. Duplicados no sustituyen notas, categoría ni urgencia.
+- PostgreSQL toma autor y fecha de la sesión al crear el pendiente. Guarda el nombre visible como instantánea, independiente de la membresía futura. No se inventa una fecha para registros antiguos.
+- 0004 es una migración incremental sin borrados. No se modificaron las migraciones históricas ni se ejecutó SQL sobre producción. Las escrituras mantienen el bloqueo familiar, las revisiones y la idempotencia.
+- Eliminar integrantes en C requerirá adaptar las referencias históricas antes de quitar membresías: el esquema actual no debe recibir un DELETE ingenuo. Se conservarán identidad histórica y cuenta Auth, pero se revocará acceso familiar en la base.
+- El cierre original de A se detuvo antes de 0004. El usuario luego confirmó 0004 y 0005 y autorizó la publicación de A–D.
+- Para futuras listas especiales se prevé un apartado independiente de la lista familiar principal; no alterará sus pendientes ni se implementa en esta actualización.
+
+
+
 ## Entrega 6: catálogo, corrección de compras y preparación de publicación
 
 - Las vistas Lista, Catálogo e Historial separan las tareas sin router ni dependencias nuevas. Catálogo significa productos conocidos; no representa stock disponible.

@@ -1,5 +1,7 @@
 # Lista familiar compartida — quinta entrega
 
+Este documento conserva el recorrido inicial de sincronización. En el proyecto actual el usuario confirmó 0001–0005; no las repitas. Para favoritos, administración familiar y PWA, consultá [etapas-bcd.md](etapas-bcd.md). La publicación de la actualización está autorizada.
+
 La entrega actual también incluye Catálogo e Historial como vistas independientes. Después de 0002 aplicá [0003_catalog_and_purchase_reversal.sql](../supabase/migrations/0003_catalog_and_purchase_reversal.sql) para administrar productos y revertir compras. La [guía de publicación](publicar-vercel.md) reúne los pasos actuales para Vercel. El recorrido de compras de este documento se mantiene; consultá los registros desde la vista **Historial**.
 
 ## Activación

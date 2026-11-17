@@ -1,21 +1,24 @@
 import type { Product, ProductDraft, ShoppingState, Unit } from '../types.ts'
 import { isShoppingState } from './storage.ts'
+import type { Category } from './categories.ts'
 
 export type ShoppingCommand =
   | ({ type: 'add' } & ProductDraft)
-  | { type: 'update' | 'buy'; productId: string; quantity: number; version?: string }
+  | { type: 'update' | 'buy'; productId: string; quantity: number; version?: string; note?: string; urgent?: boolean }
   | { type: 'remove'; productId: string; version?: string }
-  | { type: 'import'; products: { name: string; unit: Unit; quantity: number | null; active?: boolean }[] }
-  | { type: 'catalog_add'; name: string; unit: Unit }
-  | { type: 'catalog_update'; productId: string; name: string; revision?: string }
+  | { type: 'import'; products: { name: string; unit: Unit; quantity: number | null; active?: boolean; favorite?: boolean; category?: Category; note?: string; urgent?: boolean }[] }
+  | { type: 'catalog_add'; name: string; unit: Unit; category?: Category }
+  | { type: 'catalog_update'; productId: string; name: string; revision?: string; category?: Category }
   | { type: 'catalog_archive' | 'catalog_restore'; productId: string; revision?: string }
   | { type: 'revert_purchase'; purchaseId: string }
+  | { type: 'catalog_favorite'; productId: string; favorite: boolean; revision?: string }
 
 export type MutationResult = { kind: 'ok' } | { kind: 'added' | 'duplicate'; product: Product }
 
 export function parseSharedState(value: unknown): ShoppingState {
-  if (typeof value !== 'object' || value === null || !('schemaVersion' in value) || value.schemaVersion !== 3) {
-    throw new Error('Falta aplicar la migración 0003 de catálogo e historial en Supabase.')
+  if (typeof value !== 'object' || value === null || !('schemaVersion' in value) || value.schemaVersion !== 3
+    || !('featuresVersion' in value) || typeof value.featuresVersion !== 'number' || value.featuresVersion < 5) {
+    throw new Error('Falta aplicar la migración 0005 de favoritos y administración familiar. No publiques esta versión antes de aplicarla.')
   }
   if (!isShoppingState(value) || value.catalog.some(product => typeof product.active !== 'boolean' || typeof product.revision !== 'string' || !product.revision)
     || value.pending.some(item => typeof item.version !== 'string' || !item.version)
@@ -46,6 +49,9 @@ export function sharedError(code?: string): string {
 }
 
 export function importProducts(state: ShoppingState) {
-  return state.catalog.map(product => ({ name: product.name, unit: product.unit,
-    quantity: state.pending.find(item => item.productId === product.id)?.quantity ?? null, active: product.active !== false }))
+  return state.catalog.map(product => {
+    const pending = state.pending.find(item => item.productId === product.id)
+    return { name: product.name, unit: product.unit, quantity: pending?.quantity ?? null, active: product.active !== false,
+      ...(product.favorite !== undefined ? { favorite: product.favorite } : {}), ...(product.category ? { category: product.category } : {}), ...(pending?.note !== undefined ? { note: pending.note } : {}), ...(pending?.urgent !== undefined ? { urgent: pending.urgent } : {}) }
+  })
 }
