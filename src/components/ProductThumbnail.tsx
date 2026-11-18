@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, lazy, Suspense, useContext, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { flushSync } from 'react-dom'
 import type { FamilyContext, Product } from '../types.ts'
@@ -10,6 +10,7 @@ import { libraryPhoto } from '../lib/library-photos.ts'
 type Entry = { url: string; expires: number }
 type PhotoContext = { familyId: string; get: (path: string) => Promise<string> } | null
 const Photos = createContext<PhotoContext>(null)
+const PhotoCredit = lazy(() => import('./PhotoCredit.tsx').then(module => ({ default: module.PhotoCredit })))
 
 export function ProductPhotoProvider({ family, children }: { family: FamilyContext | null; children: ReactNode }) {
   // Solo memoria; el Workspace y este proveedor se desmontan al cambiar cuenta o familia.
@@ -103,10 +104,7 @@ export function ProductThumbnail({ product }: { product: Product }) {
         {source && !previewError ? <img src={source} alt={product.name} referrerPolicy="no-referrer"
           className="max-h-[65dvh] w-full rounded-lg bg-sage object-contain" onError={() => setPreviewError(true)} />
           : <p role="status" className="p-4 text-sm text-muted">La foto no está disponible en este momento.</p>}
-        {source === '/library/dulce-leche.jpg' && <p className="mt-2 text-xs text-muted">
-          <a className="underline" href="https://commons.wikimedia.org/wiki/File:Cuchara_con_dulce_de_leche.jpg" target="_blank" rel="noreferrer">Foto de jules (stonesoup)</a>
-          {' · '}<a className="underline" href="https://creativecommons.org/licenses/by/2.0/" target="_blank" rel="noreferrer">CC BY 2.0</a>
-        </p>}
+        {source?.startsWith('/library/') && <Suspense fallback={null}><PhotoCredit source={source} /></Suspense>}
       </div>
     </dialog>}
   </>

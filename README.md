@@ -1,6 +1,6 @@
 # Lista de Compras Familiar
 
-La biblioteca incluye nueve fotos ampliables. El responsable de la familia puede anular o eliminar compras. La migración 0009 ya se verificó en el proyecto compartido. [Guía de activación y prueba](docs/fotos-biblioteca-e-historial.md).
+Las 60 fichas de biblioteca tienen fotos ampliables. El responsable de la familia puede anular o eliminar compras. La migración 0009 ya se verificó en el proyecto compartido. [Guía de activación y prueba](docs/fotos-biblioteca-e-historial.md).
 
 El historial empieza con tres días de Buenos Aires y se amplía a demanda. La biblioteca ofrece 60 productos para incorporar al catálogo por selección. La migración 0008 ya se verificó en el proyecto compartido. [Activación y pruebas](docs/actualizacion-historial-biblioteca.md).
 

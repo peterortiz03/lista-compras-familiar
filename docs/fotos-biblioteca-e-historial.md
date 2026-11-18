@@ -1,6 +1,6 @@
 # Fotos de biblioteca y administración del historial
 
-Las primeras nueve fotos generales están en `public/library` y se descargan al aparecer en pantalla. [Créditos y licencias](../public/library/CREDITOS.md).
+Las 60 fotos generales están en `public/library` y se cargan al acercarse a la parte visible de la pantalla. Son ejemplos de los productos, incluidos algunos envases argentinos. La vista ampliada enlaza a la fuente y licencia de cada foto. Para reemplazar una imagen general, actualizá el archivo del producto y su crédito en `src/lib/library-photo-credits.ts` y en el listado de fuentes. [Créditos y licencias](../public/library/CREDITOS.md).
 
 El catálogo y pendientes usan la foto familiar cuando está disponible. En su ausencia, buscan una foto de biblioteca por identificador o por coincidencia exacta de nombre normalizado en productos anteriores. La familia puede agregar, reemplazar o quitar su foto desde **Catálogo → Editar**. Al quitarla reaparece la foto general, si existe, o el ícono. El botón sobre la miniatura abre la vista ampliada y se cierra con **Cerrar** o Escape.
 

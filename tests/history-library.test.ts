@@ -1,8 +1,25 @@
 import assert from 'node:assert/strict'
+import { statSync } from 'node:fs'
 import { test } from 'node:test'
 import { purchaseDay, shiftDay } from '../src/lib/history.ts'
 import { LIBRARY, libraryMatch } from '../src/lib/library.ts'
+import { libraryPhoto } from '../src/lib/library-photos.ts'
+import { credits } from '../src/lib/library-photo-credits.ts'
 import { suggestProducts } from '../src/lib/suggestions.ts'
+
+test('cada ficha tiene una foto local liviana y con crédito', () => {
+  const assets = LIBRARY.map(entry => libraryPhoto({ name: entry.name, libraryId: entry.id }))
+  assert.equal(new Set(assets).size, LIBRARY.length)
+  for (const asset of assets) {
+    assert.ok(asset)
+    const path = new URL(`../public${asset}`, import.meta.url)
+    const size = statSync(path).size
+    assert.ok(size > 0 && size <= 80 * 1024, asset)
+    assert.ok(credits[asset.slice('/library/'.length)]?.source.startsWith('https://'), asset)
+  }
+  assert.equal(libraryPhoto({ name: ' AZÚCAR ' }), '/library/azucar.jpg')
+  assert.equal(libraryPhoto({ name: 'Azúcar impalpable' }), undefined)
+})
 
 test('días de Buenos Aires cortan a medianoche local, incluso al cambiar de año', () => {
   assert.equal(purchaseDay('2027-01-01T02:59:59.999Z'), '2026-12-31')
