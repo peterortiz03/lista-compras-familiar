@@ -261,3 +261,11 @@ Al guardar, SQL reserva una ruta para esa familia y producto. El navegador sube 
 Las imágenes originales del celular pueden tener miles de píxeles y varios megabytes. La miniatura necesita unos 48 px; reducir el archivo a un lado máximo de 512 px y hasta 256 KiB evita descargar el original cada vez. CSS usa `object-fit: cover` para llenar el cuadrado sin estirar. Si la imagen falta, se muestra el ícono de categoría y el nombre sigue disponible. El historial conserva sus datos anteriores y el modo local no usa este circuito.
 
 El catálogo se importa con `lazy` al abrir su pestaña; `Suspense` muestra un texto mientras llega ese archivo JavaScript. No se añadió otra biblioteca. La configuración, archivos y pruebas se describen en [fotografias.md](fotografias.md).
+
+## 19. Leer un formato y poder escribirlo son capacidades distintas
+
+Safari puede mostrar WebP y no ofrecer el mismo codificador que otro navegador. Pedir un formato a `canvas.toBlob` no garantiza obtenerlo: hay que revisar el Blob devuelto. Ahora el procesamiento prueba WebP y después JPEG, con varias calidades y dimensiones menores si supera 256 KiB. La selección solo cambia la vista previa; el producto se confirma después de subir, por lo que un fallo previo conserva su foto guardada.
+
+Esta decisión recorre cliente y servidor. El Blob informa su MIME; la reserva SQL admite únicamente WebP/JPEG y genera una extensión acorde. La subida utiliza ese MIME y la confirmación compara formato reservado, metadata de Storage y extensión, manteniendo los permisos familiares. La migración 0007 añade esta capacidad sin cambiar 0006. Las rutas viejas continúan funcionando y la limpieza no depende del formato.
+
+En el catálogo, una cuadrícula separa el grupo imagen/texto del grupo de botones. En móvil cada grupo tiene su fila; en escritorio comparten espacio. `minmax(0, 1fr)` deja al texto usar el ancho disponible sin desplazar controles fuera de la pantalla. La validación en Chrome con codificador WebP deshabilitado demuestra la alternativa, pero la aceptación de iPhone requiere probar galería, cámara y orientación en ese dispositivo real.

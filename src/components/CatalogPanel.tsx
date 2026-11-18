@@ -44,7 +44,8 @@ export function CatalogPanel({ products, photosEnabled, onAction }: { products: 
         if (photo) {
           if (uploaded.current?.blob === photo) path = uploaded.current.path
           else {
-            path = await reservePhoto(supabase, productId, editing?.revision, !editing)
+            path = await reservePhoto(supabase, productId, editing?.revision, !editing, photo.type)
+            setNotice('Subiendo fotografía…')
             await uploadPhoto(supabase, path, photo)
             uploaded.current = { blob: photo, path }
           }
@@ -53,7 +54,7 @@ export function CatalogPanel({ products, photosEnabled, onAction }: { products: 
         void cleanupPhotos(supabase).catch(() => {})
       } else await onAction(editing ? { type: 'catalog_update', productId: editing.id, name, category: category ?? suggestCategory(name), revision: editing.revision } : { type: 'catalog_add', name, unit, category: category ?? suggestCategory(name) })
       reset(); setNotice('Producto guardado en el catálogo.')
-    } catch (failure) { setError(failure instanceof Error ? failure.message : 'No se pudo guardar el producto.') }
+    } catch (failure) { setNotice(''); setError(failure instanceof Error ? failure.message : 'No se pudo guardar el producto.') }
     finally { setBusy(false) }
   }
 
@@ -90,10 +91,10 @@ export function CatalogPanel({ products, photosEnabled, onAction }: { products: 
       </form>
       <div><label className="field-label" htmlFor="catalog-search">Buscar en el catálogo</label><input className="field" id="catalog-search" type="search" value={query} onChange={event => setQuery(event.target.value)} /></div>
       <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm"><input className="size-5" type="checkbox" checked={showRemoved} onChange={event => setShowRemoved(event.target.checked)} />Mostrar también productos quitados</label>
-      <ul className="divide-y divide-line" aria-label="Productos del catálogo">{visible.map(product => <li key={product.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
-        <ProductThumbnail key={product.photoPath} product={product} />
-        <div className="min-w-0 flex-1"><h3 className="break-words font-semibold">{product.name}</h3><p className="text-xs text-muted">{UNITS.find(entry => entry.value === product.unit)?.label} · {product.category ?? 'Otros'}{product.active === false ? ' · Quitado de sugerencias' : ''}</p></div>
-        <div className="flex flex-wrap gap-2"><button className="icon-button text-forest" type="button" aria-pressed={!!product.favorite} aria-label={`Favorito: ${product.name}`} onClick={() => void favorite(product)}>{product.favorite ? '★' : '☆'}</button><button className="button-secondary" type="button" aria-label={`Editar ${product.name} en catálogo`} onClick={() => { setPhoto(null); setRemovePhoto(false); uploaded.current = null; setEditing(product); setCategory(product.category ?? 'Otros'); setName(product.name); setUnit(product.unit); setError(''); document.getElementById('catalog-name')?.focus() }}>Editar</button><button className="button-secondary" type="button" aria-label={`${product.active === false ? 'Recuperar' : 'Quitar'} ${product.name} del catálogo`} onClick={() => void toggle(product)}>{product.active === false ? 'Recuperar' : 'Quitar'}</button></div>
+      <ul className="divide-y divide-line" aria-label="Productos del catálogo">{visible.map(product => <li key={product.id} className="catalog-product grid items-center gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="flex min-w-0 items-center gap-3"><ProductThumbnail key={product.photoPath} product={product} />
+        <div className="min-w-0 flex-1"><h3 className="[overflow-wrap:anywhere] font-semibold">{product.name}</h3><p className="text-xs text-muted">{UNITS.find(entry => entry.value === product.unit)?.label} · {product.category ?? 'Otros'}{product.active === false ? ' · Quitado de sugerencias' : ''}</p></div></div>
+        <div className="col-span-1 flex flex-wrap justify-end gap-2 sm:col-span-1"><button className="icon-button text-forest" type="button" aria-pressed={!!product.favorite} aria-label={`Favorito: ${product.name}`} onClick={() => void favorite(product)}>{product.favorite ? '★' : '☆'}</button><button className="button-secondary" type="button" aria-label={`Editar ${product.name} en catálogo`} onClick={() => { setPhoto(null); setRemovePhoto(false); uploaded.current = null; setEditing(product); setCategory(product.category ?? 'Otros'); setName(product.name); setUnit(product.unit); setError(''); document.getElementById('catalog-name')?.focus() }}>Editar</button><button className="button-secondary" type="button" aria-label={`${product.active === false ? 'Recuperar' : 'Quitar'} ${product.name} del catálogo`} onClick={() => void toggle(product)}>{product.active === false ? 'Recuperar' : 'Quitar'}</button></div>
       </li>)}</ul>
       {visible.length === 0 && <p className="text-sm text-muted">No hay productos que coincidan con esta vista.</p>}
     </fieldset>

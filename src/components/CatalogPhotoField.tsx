@@ -32,10 +32,10 @@ export function CatalogPhotoField({ product, blob, removed, onChange, onProcessi
     <p className="field-label">Fotografía opcional</p>
     <div className="flex items-center gap-3">
       {blob && preview ? <img src={preview} alt="Vista previa de la foto seleccionada" width={56} height={56} className="size-14 shrink-0 rounded-xl object-cover" /> : product && !removed ? <ProductThumbnail key={product.photoPath} product={product} /> : null}
-      <p className="text-xs text-muted">{removed ? 'Se quitará al guardar.' : blob ? 'Nueva fotografía lista para guardar.' : 'Compartida con tu familia. JPG, PNG o WebP; hasta 12 MB.'}</p>
+      <p className="text-xs text-muted">{removed ? 'Se quitará al guardar.' : blob ? 'Nueva fotografía lista para guardar.' : 'Compartida con tu familia. JPG, PNG o WebP; HEIC si el dispositivo puede leerlo. Hasta 12 MB.'}</p>
     </div>
     <fieldset disabled={processing} className="mt-3 flex min-w-0 flex-wrap gap-2">
-      <label className="button-secondary cursor-pointer focus-within:outline-2 focus-within:outline-forest">Elegir foto<input aria-label="Elegir fotografía" className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onChange={event => { void choose(event.target.files?.[0]); event.target.value = '' }} /></label>
+      <label className="button-secondary cursor-pointer focus-within:outline-2 focus-within:outline-forest">Elegir foto<input aria-label="Elegir fotografía" className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/heic-sequence,image/heif-sequence" onChange={event => { void choose(event.target.files?.[0]); event.target.value = '' }} /></label>
       <label className="button-secondary cursor-pointer focus-within:outline-2 focus-within:outline-forest">Tomar foto<input aria-label="Tomar fotografía" className="sr-only" type="file" accept="image/*" capture="environment" onChange={event => { void choose(event.target.files?.[0]); event.target.value = '' }} /></label>
       {(blob || (product?.photoPath && !removed)) && <button type="button" className="button-secondary" onClick={() => { onChange(null, !!product?.photoPath); setError('') }}>Quitar foto</button>}
       {removed && <button type="button" className="button-secondary" onClick={() => onChange(null, false)}>Conservar foto actual</button>}

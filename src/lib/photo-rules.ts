@@ -1,7 +1,7 @@
 export const PHOTO_BUCKET = 'product-photos'
 export const MAX_INPUT_BYTES = 12 * 1024 * 1024
 export const MAX_PHOTO_BYTES = 256 * 1024
-const accepted = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const accepted = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'])
 
 export function validatePhoto(file: { type: string; size: number }): void {
   if (!accepted.has(file.type)) throw new Error('Elegí una imagen JPG, PNG o WebP. Si está en HEIC, exportala como JPG desde tu galería.')
@@ -16,5 +16,13 @@ export function photoDimensions(width: number, height: number) {
 
 export function belongsToFamily(path: string, familyId: string): boolean {
   const uuid = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
-  return new RegExp(`^${uuid}/${uuid}/${uuid}\\.webp$`, 'i').test(path) && path.split('/')[0] === familyId
+  return new RegExp(`^${uuid}/${uuid}/${uuid}\\.(?:webp|jpg)$`, 'i').test(path) && path.split('/')[0] === familyId
+}
+
+export function photoMime(type: string): 'image/webp' | 'image/jpeg' {
+  if (type !== 'image/webp' && type !== 'image/jpeg') throw new Error('El resultado debe ser WebP o JPEG.')
+  return type
+}
+export function photoExtension(type: string): 'webp' | 'jpg' {
+  return photoMime(type) === 'image/webp' ? 'webp' : 'jpg'
 }

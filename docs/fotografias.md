@@ -1,5 +1,27 @@
 # Fotografías del catálogo
 
+## Corrección de compatibilidad iOS (0007)
+
+Estado: el usuario confirmó 0007 y autorizó la publicación. Se verificaron en producción la reserva con formato, la columna de MIME esperado y el bucket privado con WebP/JPEG y 256 KiB. Falta validar con un iPhone físico. Las instrucciones de aplicación siguientes quedan para instalaciones nuevas: no repitas migraciones en el proyecto actual.
+
+La versión anterior exigía que `canvas.toBlob` generara WebP. Un navegador puede leer ese formato sin poder exportarlo y devolver PNG al solicitar un tipo no compatible. No es evidencia de que esté desactualizado. Ver [comportamiento de toBlob](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob).
+
+Ahora se decodifica con la imagen nativa (orientación incluida), se intenta WebP y, si falla, devuelve null o un tipo diferente, se intenta JPEG. Se prueban tres calidades y reducciones adicionales hasta un lado máximo de 256 px si hace falta; inicialmente se conservan los 512 px. Se mantiene el límite de 256 KiB, sin estirar. JPEG recibe fondo blanco para transparencias. Si nada funciona, el error conserva la foto guardada.
+
+Entrada: JPG, PNG, WebP y HEIC/HEIF únicamente si el navegador logra decodificarlos; en caso contrario se solicita exportar JPEG. No hay conversor HEIC adicional. Salida: WebP `.webp` o JPEG `.jpg`, con MIME coherente en reserva y subida. La confirmación SQL compara el MIME de metadata de Storage y la extensión con el formato autorizado por la reserva; no lee los bytes binarios desde PostgreSQL.
+
+### Orden de activación y prueba
+
+1. Con aprobación explícita, abrir SQL Editor y ejecutar completo [`0007_photo_format_compatibility.sql`](../supabase/migrations/0007_photo_format_compatibility.sql) **una sola vez después de 0006**. No repetir 0001–0006. Si hay error, no publicar y conservar el mensaje.
+2. La migración añade el MIME esperado a las reservas (WebP para las anteriores), habilita JPEG en el bucket privado y reemplaza las funciones de reserva/confirmación. Conserva la firma antigua para clientes WebP. No borra objetos ni productos, no cambia políticas ni límite, y no necesita redeplegar la limpieza: ya funciona por ruta sin filtrar extensiones.
+3. Verificar en Storage que `product-photos` siga privado, con 262144 bytes y MIME `image/webp` e `image/jpeg`. Después autorizar la publicación del frontend. No hacen falta variables ni secretos nuevos.
+4. Desde iPhone/Safari, elegir JPG y PNG; revisar vista previa, guardar y agregar a pendientes. En otra cuenta/dispositivo de la familia debe aparecer la misma foto tras actualizar. Repetir con cámara, Chrome en iOS y HEIC real; un HEIC no decodificable debe pedir JPEG.
+5. Reemplazar una foto existente, cancelar otra edición y quitarla. La foto anterior debe conservarse ante procesamiento/subida fallidos y los descartes seguir limpiándose. Una respuesta final perdida exige actualizar antes de reintentar.
+
+El catálogo ahora usa un grupo foto/texto y otro de acciones: en celulares van uno debajo del otro y en escritorio comparten fila. El nombre usa el ancho restante y solo rompe una palabra si no cabe completa. No se modificaron pendientes, historial ni sugerencias.
+
+Verificado: build, lint, 27 pruebas Node; SQL en PostgreSQL temporal (0001–0007, permisos y pruebas previas, JPEG, rechazo de MIME/extensión incoherentes y limpieza). Chrome con WebP nativo y falta de codificador simulada mediante PNG, null y excepción; JPEG correcto en los tres casos, reducción extra y error específico para HEIC inválido. Catálogo real revisado a 320/375/430/1440 px, con fotos, íconos, favoritos y nombres largos, sin desbordes. No equivale a una prueba en Safari/iPhone real ni a una carga en Storage de producción.
+
 La configuración de producción está completa, con autorización del usuario tras iniciar sesión en Supabase CLI. Se comprobó que 0006 ya estaba aplicada y no se repitió. Se desplegó `cleanup-product-photos` con Verify JWT desactivado y validación propia de secreto, se configuraron Vault, pg_cron y pg_net y se programó la limpieza cada 15 minutos. La llamada sin secreto devolvió 401; con secreto, 200. La llamada desde PostgreSQL usando Vault también devolvió 200 sin fallos. No se crearon productos o cuentas de prueba en producción. Los pasos siguientes quedan como referencia para instalaciones nuevas: no hay que repetirlos en el proyecto actual.
 
 ## Qué cambia

@@ -1,5 +1,13 @@
 # Decisiones del proyecto
 
+## Corrección de fotos iOS y catálogo (0007 verificada)
+
+- Exportar WebP es opcional; si no se obtiene ese MIME se intenta JPEG, manteniendo 256 KiB, calidades descendentes y reducción adicional proporcional. Se conserva orientación nativa y se permite HEIC/HEIF solo cuando se pueda decodificar.
+- Reserva autorizada con MIME esperado: el servidor emite `.webp` o `.jpg` y contrasta metadata de Storage y extensión al confirmar. No se admite una ruta arbitraria. Se conserva el contrato antiguo de reserva y las imágenes existentes.
+- 0007 es incremental; no se editó 0006. El usuario confirmó su aplicación y autorizó commit, push y publicación. Se verificó el esquema remoto mediante consultas de solo lectura, sin volver a aplicar SQL. Políticas, firmas temporales, limpieza y secreto continúan iguales.
+- Catálogo: foto y nombre juntos, acciones abajo en móviles; distribución horizontal desde sm. Sin cambios de estética ni rediseño de otras vistas.
+- Validación local satisfactoria; aceptación final pendiente de iPhone físico. Instrucciones en [fotografias.md](fotografias.md#corrección-de-compatibilidad-ios-0007).
+
 ## Fotografías opcionales del catálogo
 
 - Una referencia por producto familiar; no pertenece al pendiente ni al historial. Solo se administra en Catálogo. El modo local no procesa ni solicita imágenes; tampoco se importan referencias de otra familia.

@@ -1,5 +1,7 @@
 # Lista de Compras Familiar
 
+**Corrección de fotografías y catálogo:** exportación WebP con alternativa JPEG y acciones en segunda fila en celulares. El usuario aplicó 0007 y autorizó la publicación; se verificaron la reserva de formato y el bucket privado con WebP/JPEG y límite 256 KiB. No repitas las migraciones. La aceptación en un iPhone real sigue pendiente; ver [fotografias.md](docs/fotografias.md#corrección-de-compatibilidad-ios-0007).
+
 **Fotografías del catálogo:** Storage privado y migración 0006 configurados. Función de limpieza desplegada con secreto exclusivo y Cron cada 15 minutos, verificado con respuesta HTTP 200. La función forma parte de esta versión; ver [uso y configuración](docs/fotografias.md). No repitas las migraciones.
 
 **Actualización A–D:** categorías, notas, autoría, urgencia, favoritos, sugerencias, compartir, administración familiar, acceso persistente y PWA. El usuario confirmó la ejecución de 0004 y 0005 y autorizó la publicación. Ver [efectos y verificaciones](docs/etapas-bcd.md).
