@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useState, useSyncExternalStore } from 'react'
+import { flushSync } from 'react-dom'
 import type { FamilyContext, Product, ProductDraft, Purchase } from '../types.ts'
 import type { ShoppingCommand } from '../lib/shared-shopping.ts'
 import { useShoppingData } from '../hooks/useShoppingData.ts'
@@ -7,12 +8,21 @@ import { importProducts } from '../lib/shared-shopping.ts'
 import { ProductForm } from './ProductForm.tsx'
 import { ShoppingList } from './ShoppingList.tsx'
 import { PurchaseDialog } from './PurchaseDialog.tsx'
-import { PurchaseHistory } from './PurchaseHistory.tsx'
 import { Icon } from './Icon.tsx'
 import { ShareList } from './ShareList.tsx'
 import { ProductPhotoProvider } from './ProductThumbnail.tsx'
 
 const CatalogPanel = lazy(() => import('./CatalogPanel.tsx').then(module => ({ default: module.CatalogPanel })))
+const PurchaseHistory = lazy(() => import('./PurchaseHistory.tsx').then(module => ({ default: module.PurchaseHistory })))
+
+function subscribeToConnection(callback: () => void) {
+  window.addEventListener('online', callback)
+  window.addEventListener('offline', callback)
+  return () => {
+    window.removeEventListener('online', callback)
+    window.removeEventListener('offline', callback)
+  }
+}
 
 interface Selection { product: Product; quantity: number; version?: string; note?: string; urgent?: boolean }
 
@@ -24,13 +34,33 @@ export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) 
   const [operationError, setOperationError] = useState('')
   const [view, setView] = useState<'list' | 'catalog' | 'history'>('list')
 
+  const [formOpen, setFormOpen] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const online = useSyncExternalStore(subscribeToConnection, () => navigator.onLine)
+
+  async function refreshManually() {
+    setRefreshing(true)
+    try { await refresh(true) }
+    finally { setRefreshing(false) }
+  }
+
+  function openForm(item: Selection | null) {
+    flushSync(() => { setEditing(item); setFormOpen(true) })
+    document.getElementById(item ? 'product-quantity' : 'product-name')?.focus()
+  }
+
+  function closeForm() {
+    setEditing(null); setFormOpen(false)
+    requestAnimationFrame(() => document.getElementById('open-product-form')?.focus())
+  }
+
   function select(product: Product): Selection | null {
     const item = state.pending.find(entry => entry.productId === product.id)
     return item ? { product, quantity: item.quantity, version: item.version, note: item.note, urgent: item.urgent } : null
   }
   function handleEdit(product: Product) {
-    setEditing(select(product))
-    document.getElementById('agregar-producto')?.scrollIntoView({ block: 'start' })
+    const item = select(product)
+    if (item) openForm(item)
   }
   async function handleAdd(draft: ProductDraft): Promise<Product | null> {
     const result = await mutate({ type: 'add', ...draft })
@@ -40,7 +70,7 @@ export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) 
   }
   async function handleSave(productId: string, quantity: number, note: string, urgent: boolean) {
     await mutate({ type: 'update', productId, quantity, note, urgent, version: editing?.version })
-    setEditing(null); setNotice('Cantidad actualizada.'); setOperationError('')
+    closeForm(); setNotice('Cantidad actualizada.'); setOperationError('')
   }
   async function handleRemove(product: Product) {
     const item = select(product)
@@ -64,7 +94,7 @@ export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) 
       setNotice('Compra revertida. La cantidad volvió a pendientes.'); setOperationError('')
     } catch (failure) { setOperationError(failure instanceof Error ? failure.message : 'No se pudo revertir la compra.') }
   }
-  async function catalogAction(command: ShoppingCommand) { await mutate(command) }
+  async function catalogAction(command: ShoppingCommand) { return mutate(command) }
   async function handleImport() {
     const local = loadState(() => window.localStorage)
     if (!local.canSave) { setOperationError('No se pudo leer la lista local. La copia original se conserva.'); return }
@@ -75,30 +105,33 @@ export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) 
     } catch (failure) { setOperationError(failure instanceof Error ? failure.message : 'No se pudo importar.') }
   }
 
-  const disabled = busy || !ready || (!!family && !!error)
+  const disabled = busy || !ready || (!!family && (!online || !!error))
   return <ProductPhotoProvider family={family}><section aria-label={family ? `Lista familiar de ${family.name}` : 'Lista local'}>
-    <aside className="mb-5 rounded-2xl border border-line bg-sage p-4 text-sm leading-relaxed text-forest">
-      <strong>{family ? `Lista compartida · ${family.name}` : 'Lista local de este navegador'}</strong>
-      <p className="mt-1">{family ? 'Los integrantes ven los mismos productos. Se actualiza cada 3 segundos mientras esta pestaña está visible y al volver a ella. Las operaciones requieren conexión.' : 'Se guarda en este navegador. Ingresá y creá o elegí tu familia para usar la lista compartida. Esta copia no se sube automáticamente.'}</p>
-      {family && <div className="mt-3 flex flex-wrap items-center gap-3"><button className="button-secondary" disabled={busy} onClick={() => void refresh(true)}>Actualizar lista</button><span className="text-xs">{busy ? 'Guardando…' : lastSync ? `Última actualización: ${lastSync.toLocaleTimeString('es-AR')}` : 'Cargando lista familiar…'}</span></div>}
-    </aside>
+    {family ? <details className="mb-2 text-sm text-forest">
+      <summary className="min-h-11 cursor-pointer py-3">
+        Lista compartida · {busy ? 'Guardando…' : !online ? 'Sin conexión' : refreshing ? 'Actualizando…' : error ? 'Error de sincronización' : ready ? 'Al día' : 'Actualizando…'}
+      </summary>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <button className="button-secondary" type="button" disabled={busy || refreshing || !online} onClick={() => void refreshManually()}>Actualizar lista</button>
+        <span className="text-xs">{family.name}{lastSync ? ` · Última actualización ${lastSync.toLocaleTimeString('es-AR')}` : ''}</span>
+      </div>
+    </details> : <p className="mb-3 text-sm text-muted">Lista local · Guardada en este dispositivo</p>}
     {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-4 text-sm text-red-800">{error}{family && ' Se mantienen los últimos datos confirmados; las operaciones quedan deshabilitadas hasta recuperar la conexión.'}</p>}
     {operationError && <p role="alert" className="mb-4 text-sm text-red-800">{operationError}</p>}
     <p role="status" aria-live="polite" className={notice ? 'mb-4 rounded-xl bg-sage p-3 text-sm text-forest' : 'sr-only'}>{notice}</p>
-    <nav aria-label="Secciones de compras" className="mb-5 flex flex-wrap gap-3">{([{ id: 'list', label: 'Lista' }, { id: 'catalog', label: 'Catálogo' }, { id: 'history', label: 'Historial' }] as const).map(entry => <button key={entry.id} className={view === entry.id ? 'button-primary' : 'button-secondary'} type="button" aria-pressed={view === entry.id} onClick={() => { setView(entry.id); setEditing(null); setOperationError('') }}>{entry.label}</button>)}</nav>
-    {view === 'list' && <ShareList state={state} />}
-    {view === 'list' && <a href="#agregar-producto" className="button-primary mb-5" onClick={event => { if (disabled) event.preventDefault(); else setEditing(null) }} aria-disabled={disabled}><Icon name="plus" size={18} />Agregar faltante</a>}
-    {family && ready && state.catalog.length === 0 && <div className="surface mb-5 p-4"><p className="text-sm text-muted">La familia empieza vacía. Podés agregar productos o copiar el catálogo y los pendientes locales. El historial anterior queda en este navegador.</p><button className="button-secondary mt-3" disabled={disabled} onClick={handleImport}>Importar catálogo y pendientes locales</button></div>}
-    <div className="mb-6 grid grid-cols-2 gap-3">
-      <div className="stat-card"><div><p className="text-xs text-muted">Productos pendientes</p><p className="mt-1 text-3xl font-bold">{state.pending.length}</p></div><Icon name="basket" /></div>
-      <div className="stat-card"><div><p className="text-xs text-muted">En tu catálogo</p><p className="mt-1 text-3xl font-bold">{state.catalog.filter(product => product.active !== false).length}</p></div><Icon name="leaf" /></div>
-    </div>
+    <nav aria-label="Secciones de compras" className="mb-5 flex flex-wrap gap-3">{([{ id: 'list', label: 'Lista' }, { id: 'catalog', label: 'Catálogo' }, { id: 'history', label: 'Historial' }] as const).map(entry => <button key={entry.id} className={view === entry.id ? 'button-primary' : 'button-secondary'} type="button" aria-pressed={view === entry.id} onClick={() => { setView(entry.id); setEditing(null); setFormOpen(false); setOperationError('') }}>{entry.label}</button>)}</nav>
+    {view === 'list' && <button id="open-product-form" type="button" className="button-primary mb-3" disabled={disabled} onClick={() => openForm(null)}><Icon name="plus" size={18} />Agregar faltante</button>}
+    {view === 'catalog' && family && ready && state.catalog.length === 0 && <details className="mb-3 text-sm">
+      <summary className="min-h-11 cursor-pointer py-3 text-forest">Copiar datos de este dispositivo</summary>
+      <button className="button-secondary" type="button" disabled={disabled} onClick={handleImport}>Importar catálogo y pendientes locales</button>
+    </details>}
     <fieldset disabled={disabled} className="min-w-0">
-      {view === 'catalog' ? <Suspense fallback={<p role="status">Cargando catálogo…</p>}><CatalogPanel products={state.catalog} photosEnabled={!!family && !!state.photoStorage} onAction={catalogAction} /></Suspense> : view === 'history' ? <PurchaseHistory history={state.history} family={family} onRevert={handleRevert} /> : <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="min-w-0"><ShoppingList state={state} onEdit={handleEdit} onRemove={handleRemove} onBuy={product => setBuying(select(product))} /></div>
-        <div className="min-w-0 lg:sticky lg:top-6"><ProductForm key={editing?.product.id ?? 'new'} catalog={state.catalog} history={state.history} pending={state.pending} pendingIds={state.pending.map(item => item.productId)} editing={editing} onAdd={handleAdd} onSave={handleSave} onEdit={handleEdit} onCancel={() => setEditing(null)} /></div>
+      {view === 'catalog' ? <Suspense fallback={<p role="status">Cargando catálogo…</p>}><CatalogPanel products={state.catalog} photosEnabled={!!family && !!state.photoStorage} onAction={catalogAction} /></Suspense> : view === 'history' ? ready && <Suspense fallback={<p role="status">Cargando historial…</p>}><PurchaseHistory history={state.history} family={family} revision={state.purchaseRevision} onRevert={handleRevert} /></Suspense> : <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="order-2 min-w-0 lg:order-1"><ShoppingList state={state} onEdit={handleEdit} onRemove={handleRemove} onBuy={product => setBuying(select(product))} /></div>
+        <div className={`${formOpen ? "block" : "hidden"} order-1 min-w-0 lg:sticky lg:top-6 lg:order-2 lg:block`}><ProductForm key={editing?.product.id ?? 'new'} catalog={state.catalog} history={state.history} purchaseStats={state.purchaseStats} pending={state.pending} pendingIds={state.pending.map(item => item.productId)} editing={editing} onAdd={handleAdd} onSave={handleSave} onEdit={handleEdit} onCancel={closeForm} /></div>
       </div>}
     </fieldset>
+    {view === 'list' && <div className="mt-3"><ShareList state={state} /></div>}
     {buying && <PurchaseDialog product={buying.product} pending={buying.quantity} onSave={handlePurchase} onCancel={() => setBuying(null)} />}
   </section></ProductPhotoProvider>
 }

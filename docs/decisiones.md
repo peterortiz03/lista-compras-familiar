@@ -1,5 +1,13 @@
 # Decisiones del proyecto
 
+## Historial por períodos y biblioteca argentina
+
+- La sincronización consulta `get_family_list` para catálogo y pendientes. Una revisión de compras indica cuándo recalcular y enviar frecuencia y recencia de todo el historial vigente.
+- Historial consulta intervalos de días de Buenos Aires. Cada respuesta entrega hasta 100 compras para mostrar y una fila adicional para saber si hay más. El cursor usa fecha exacta e ID. Para pasar al período anterior, la consulta indica el último día con compras y evita recorrer semanas vacías.
+- La biblioteca está versionada como datos de la aplicación, con identificadores estables y alias de búsqueda. Una sola operación incorpora la selección bajo el bloqueo de familia y respeta claves únicas por nombre normalizado e ID de biblioteca. Los alias solo ayudan a encontrar fichas. Recuperar un producto archivado exige selección explícita y revisión vigente.
+- Las 60 fichas usan íconos de categoría. Las fotos familiares siguen como recurso privado. La lista y el catálogo reservan el espacio de la miniatura y mantienen el ícono visible hasta que carga la foto.
+- La lista queda arriba en móvil, la cuenta abre desde el encabezado y el catálogo muestra búsqueda y productos de entrada. Catálogo, biblioteca e historial cargan su código al abrirse.
+
 ## Corrección de fotos iOS y catálogo (0007 verificada)
 
 - Exportar WebP es opcional; si no se obtiene ese MIME se intenta JPEG, manteniendo 256 KiB, calidades descendentes y reducción adicional proporcional. Se conserva orientación nativa y se permite HEIC/HEIF solo cuando se pueda decodificar.

@@ -35,6 +35,7 @@ export function ProductThumbnail({ product }: { product: Product }) {
   const photos = useContext(Photos)
   const frame = useRef<HTMLSpanElement>(null)
   const [url, setUrl] = useState('')
+  const [loadedUrl, setLoadedUrl] = useState('')
   const [visible, setVisible] = useState(false)
   const path = product.photoPath
   const familyId = photos?.familyId
@@ -60,8 +61,8 @@ export function ProductThumbnail({ product }: { product: Product }) {
     window.addEventListener('focus', load)
     return () => { active = false; window.clearInterval(timer); window.removeEventListener('focus', load) }
   }, [path, visible])
-  if (!photos) return null // El modo local conserva su presentación y no consulta Storage.
-  return <span ref={frame} className="product-thumbnail flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-sage text-forest" aria-hidden="true">
-    {path && url ? <img key={url} src={url} alt="" width={48} height={48} loading="lazy" decoding="async" referrerPolicy="no-referrer" className="size-full object-cover" onError={() => setUrl('')} /> : <CategoryIcon category={product.category} />}
+  return <span ref={frame} className="product-thumbnail relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-sage text-forest" aria-hidden="true">
+    <CategoryIcon category={product.category} />
+    {photos && path && url && <img key={url} src={url} alt="" width={48} height={48} loading="lazy" decoding="async" referrerPolicy="no-referrer" className={`absolute inset-0 size-full bg-sage object-contain ${loadedUrl === url ? "opacity-100" : "opacity-0"}`} onLoad={() => setLoadedUrl(url)} onError={() => { setUrl(''); setLoadedUrl('') }} />}
   </span>
 }

@@ -1,5 +1,7 @@
 # Lista de Compras Familiar
 
+El historial empieza con tres días de Buenos Aires y se amplía a demanda. La biblioteca ofrece 60 productos para incorporar al catálogo por selección. La migración 0008 ya se verificó en el proyecto compartido. [Activación y pruebas](docs/actualizacion-historial-biblioteca.md).
+
 **Corrección de fotografías y catálogo:** exportación WebP con alternativa JPEG y acciones en segunda fila en celulares. El usuario aplicó 0007 y autorizó la publicación; se verificaron la reserva de formato y el bucket privado con WebP/JPEG y límite 256 KiB. No repitas las migraciones. La aceptación en un iPhone real sigue pendiente; ver [fotografias.md](docs/fotografias.md#corrección-de-compatibilidad-ios-0007).
 
 **Fotografías del catálogo:** Storage privado y migración 0006 configurados. Función de limpieza desplegada con secreto exclusivo y Cron cada 15 minutos, verificado con respuesta HTTP 200. La función forma parte de esta versión; ver [uso y configuración](docs/fotografias.md). No repitas las migraciones.

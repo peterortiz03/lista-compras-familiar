@@ -6,12 +6,13 @@ import { cleanName, normalizeName, quantityError } from '../lib/shopping.ts'
 import { CATEGORIES, suggestCategory } from '../lib/categories.ts'
 import type { Category } from '../lib/categories.ts'
 import { suggestProducts } from '../lib/suggestions.ts'
-import type { PendingItem, Purchase } from '../types.ts'
+import type { PendingItem, Purchase, PurchaseStat } from '../types.ts'
 import { Icon } from './Icon.tsx'
 
 interface ProductFormProps {
   catalog: Product[]
   history: Purchase[]
+  purchaseStats?: PurchaseStat[]
   pending: PendingItem[]
   pendingIds: string[]
   editing: { product: Product; quantity: number; note?: string; urgent?: boolean } | null
@@ -21,7 +22,8 @@ interface ProductFormProps {
   onCancel: () => void
 }
 
-export function ProductForm({ catalog, history, pending, pendingIds, editing, onAdd, onSave, onEdit, onCancel }: ProductFormProps) {
+export function ProductForm({ catalog, history, purchaseStats, pending, pendingIds, editing, onAdd, onSave, onEdit, onCancel }: ProductFormProps) {
+  const [suggestionsOpen, setSuggestionsOpen] = useState(true)
   const [name, setName] = useState(editing?.product.name ?? '')
   const [quantity, setQuantity] = useState(String(editing?.quantity ?? 1))
   const [unit, setUnit] = useState<Unit>(editing?.product.unit ?? 'unidad')
@@ -37,7 +39,7 @@ export function ProductForm({ catalog, history, pending, pendingIds, editing, on
   const selected = catalog.find((product) => normalizeName(product.name) === normalizeName(name))
   const activeUnit = selected?.unit ?? unit
   const suggestions = !editing
-    ? suggestProducts(catalog, history, name, 5, pending)
+    ? suggestProducts(catalog, history, name, normalizeName(name) ? catalog.length : 5, pending, purchaseStats)
     : []
 
   useEffect(() => {
@@ -79,7 +81,7 @@ export function ProductForm({ catalog, history, pending, pendingIds, editing, on
           setDuplicate(existing)
           return
         }
-        setName(''); setNote(''); setUrgent(false); setCategory(null)
+        setName(''); setSuggestionsOpen(true); setNote(''); setUrgent(false); setCategory(null)
         setQuantity('1')
         setUnit('unidad')
         focusAfterSave.current = true
@@ -94,23 +96,29 @@ export function ProductForm({ catalog, history, pending, pendingIds, editing, on
       <div className="mb-5 flex items-center gap-3">
         <span className="flex size-10 items-center justify-center rounded-xl bg-sage text-forest"><Icon name={editing ? 'edit' : 'plus'} /></span>
         <div>
-          <h2 id="form-title" className="text-lg font-bold tracking-tight">{editing ? 'Editar cantidad' : 'Sumá a la lista'}</h2>
+          <h2 id="form-title" className="text-lg font-bold tracking-tight">{editing ? 'Editar cantidad' : 'Agregar faltante'}</h2>
           <p className="mt-0.5 text-sm text-muted">{editing ? 'Actualizá lo que hace falta.' : '¿Qué hace falta en casa?'}</p>
         </div>
       </div>
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <fieldset disabled={busy} className="min-w-0 space-y-4">
+        <fieldset disabled={busy} className="min-w-0 space-y-4" onKeyDown={event => {
+          if (event.key === 'Escape' && suggestionsOpen && suggestions.length) {
+            event.preventDefault()
+            setSuggestionsOpen(false)
+            nameRef.current?.focus()
+          }
+        }}>
           <div>
             <label className="field-label" htmlFor="product-name">Producto</label>
-            <input ref={nameRef} id="product-name" className="field" placeholder="Ej.: Manzanas" value={name} maxLength={80} readOnly={!!editing} autoComplete="off" aria-describedby={error ? 'form-error' : undefined} onChange={(event) => { setName(event.target.value); setError(''); setDuplicate(null) }} />
-            {suggestions.length > 0 && (
+            <input ref={nameRef} id="product-name" className="field" placeholder="Ej.: Manzanas" value={name} maxLength={80} readOnly={!!editing} autoComplete="off" aria-describedby={error ? 'form-error' : undefined} onChange={(event) => { setName(event.target.value); setSuggestionsOpen(true); setError(''); setDuplicate(null) }} />
+            {suggestionsOpen && suggestions.length > 0 && (
               <div className="mt-2 overflow-hidden rounded-xl border border-line bg-white">
-                <p className="px-3 pt-3 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase">{name ? 'Coincidencias' : 'Favoritos y compras habituales'}</p>
-                <ul aria-label="Sugerencias de productos">
+                <p className="px-3 pt-3 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase">{normalizeName(name) ? `${suggestions.length} coincidencias${suggestions.length > 5 ? ' · Desplazá para ver todas' : ''}` : 'Favoritos y compras habituales'}</p>
+                <ul className="max-h-56 overflow-y-auto overscroll-contain" aria-label="Sugerencias de productos">
                   {suggestions.map((product) => (
                     <li key={product.id}>
-                      <button type="button" className="flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-sage" onClick={() => { setName(product.name); setUnit(product.unit); setDuplicate(null); quantityRef.current?.focus() }}>
-                        <span className="font-medium">{product.favorite ? '★ ' : ''}{product.name}</span>
+                      <button type="button" className="flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-sage" onClick={() => { setName(product.name); setUnit(product.unit); setSuggestionsOpen(false); setDuplicate(null); quantityRef.current?.focus() }}>
+                        <span className="min-w-0 [overflow-wrap:anywhere] font-medium">{product.favorite ? '★ ' : ''}{product.name}</span>
                         <span className="text-xs text-muted">{pendingIds.includes(product.id) ? 'Ya pendiente' : UNITS.find((entry) => entry.value === product.unit)?.label}</span>
                       </button>
                     </li>
@@ -143,7 +151,7 @@ export function ProductForm({ catalog, history, pending, pendingIds, editing, on
             </div>
           )}
           <button type="submit" className="button-primary w-full"><Icon name={editing ? 'check' : 'plus'} size={18} />{editing ? 'Guardar cantidad' : 'Agregar producto'}</button>
-          {editing && <button type="button" className="button-secondary w-full" onClick={onCancel}>Cancelar edición</button>}
+          {<button type="button" className={`button-secondary w-full ${editing ? '' : 'lg:hidden'}`} onClick={onCancel}>{editing ? 'Cancelar edición' : 'Cerrar formulario'}</button>}
         </fieldset>
       </form>
       {!editing && <p className="mt-4 border-t border-line pt-4 text-xs leading-relaxed text-muted">Cada producto nuevo se suma al catálogo y a tus sugerencias.</p>}

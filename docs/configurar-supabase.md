@@ -1,5 +1,7 @@
 # Conectar cuentas y familias con Supabase
 
+La migración de historial y biblioteca (0008) ya se verificó en el proyecto compartido. En un proyecto nuevo, aplicala después de 0007 y antes de publicar el cliente. [Orden y comprobaciones](actualizacion-historial-biblioteca.md).
+
 Actualización: el usuario confirmó 0004 y 0005 (favoritos y administración) y autorizó la publicación; revisá [etapas-bcd.md](etapas-bcd.md). No repitas las migraciones en el proyecto actual.
 
 Para una instalación actual, esta guía prepara 0001; continuá luego con 0002 según [sincronizacion.md](sincronizacion.md) y 0003 para Catálogo e Historial. Ejecutá cada migración una vez y en orden. La [guía de Vercel](publicar-vercel.md) explica la publicación posterior.

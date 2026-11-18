@@ -23,7 +23,6 @@ export function ShoppingList({ state, onEdit, onRemove, onBuy }: ShoppingListPro
       <div className="border-b border-line p-5 sm:p-6">
         <div className="mb-5 flex items-center justify-between gap-3">
           <h2 id="pending-title" className="text-xl font-bold tracking-tight">Por comprar <span className="ml-2 inline-flex size-7 items-center justify-center rounded-full bg-sage align-middle text-sm text-forest">{state.pending.length}</span></h2>
-          <span className="hidden text-xs text-muted sm:inline">Tu próxima compra empieza acá</span>
         </div>
         <label htmlFor="pending-search" className="sr-only">Buscar en pendientes</label>
         <div className="relative">
@@ -40,8 +39,8 @@ export function ShoppingList({ state, onEdit, onRemove, onBuy }: ShoppingListPro
               <button className="buy-button" type="button" aria-label={`Registrar compra de ${product.name}`} title="Registrar compra completa o parcial" onClick={() => onBuy(product)}><Icon name="check" size={19} /></button>
               <ProductThumbnail key={product.photoPath} product={product} />
               <div className="min-w-0 flex-1">
-                <h3 className="break-words text-[15px] font-semibold sm:text-base">{product.name}{urgent && <span className="ml-2 text-xs font-semibold text-amber-800">Urgente</span>}</h3>
-                {note && <p className="mt-1 break-words text-sm text-muted">{note}</p>}
+                <h3 className="[overflow-wrap:anywhere] text-[15px] font-semibold sm:text-base">{product.name}{urgent && <span className="ml-2 text-xs font-semibold text-amber-800">Urgente</span>}</h3>
+                {note && <p className="mt-1 [overflow-wrap:anywhere] text-sm text-muted">{note}</p>}
                 <p className="mt-1 text-[11px] text-muted">Agregado por {addedByName ?? 'Integrante anterior'}{addedAt && <> · <time dateTime={addedAt}>{new Date(addedAt).toLocaleDateString('es-AR')}</time></>}</p>
                 <p className="mt-1 text-xs text-muted">{UNITS.find((entry) => entry.value === product.unit)?.label}</p>
               </div>

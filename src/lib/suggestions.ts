@@ -1,11 +1,14 @@
-import type { PendingItem, Product, Purchase } from '../types.ts'
+import type { PendingItem, Product, Purchase, PurchaseStat } from '../types.ts'
 import { normalizeName } from './shopping.ts'
 
 // Favoritos manuales primero; luego frecuencia y última compra, sin repetir productos.
-export function suggestProducts(catalog: Product[], history: Purchase[], query: string, limit = 5, pending: PendingItem[] = []): Product[] {
+export function suggestProducts(catalog: Product[], history: Purchase[], query: string, limit = 5, pending: PendingItem[] = [], summary?: PurchaseStat[]): Product[] {
   const search = normalizeName(query)
   const stats = new Map<string, { count: number; recent: number }>()
-  for (const purchase of history) {
+  for (const product of summary ?? []) {
+    stats.set(product.productId, { count: product.count, recent: Date.parse(product.lastPurchasedAt) })
+  }
+  for (const purchase of summary ? [] : history) {
     if (purchase.revertedAt) continue
     const previous = stats.get(purchase.productId) ?? { count: 0, recent: 0 }
     stats.set(purchase.productId, { count: previous.count + 1, recent: Math.max(previous.recent, Date.parse(purchase.purchasedAt) || 0) })

@@ -1,5 +1,15 @@
 # Cómo funciona la aplicación — Entrega 5
 
+## Historial por períodos y biblioteca
+
+La lista solicita catálogo y pendientes con `get_family_list`. La revisión de compras funciona como un comprobante de vigencia. Si una compra o reversión la cambia, el servidor vuelve a contar las compras vigentes y devuelve la última fecha por producto. De ese modo las sugerencias recuerdan compras antiguas aunque la pestaña de historial todavía esté cerrada.
+
+Al abrir historial, el navegador calcula hoy, ayer y anteayer en la zona de Buenos Aires. SQL usa esos mismos cortes. Cuando un intervalo tiene más de 100 compras, el cursor indica desde qué fecha e ID seguir. Dos compras con la misma fecha se distinguen por ID. Si una compra cambia, el historial vuelve a consultar los lotes ya abiertos.
+
+`library.ts` define las fichas generales y sus alias. La selección vive en el componente y se mantiene al buscar o filtrar. Al guardar, el servidor agrega solo las fichas elegidas y conserva los datos de los productos existentes. Cada familia tiene su propio catálogo y sus fotos firmadas. Las fichas generales de esta entrega se representan con íconos.
+
+En móvil, el formulario de pendientes se abre cuando se necesita y recibe el foco en el campo. El catálogo funciona igual para crear o editar. Las miniaturas muestran primero su ícono y la foto lo cubre solo cuando termina de cargar.
+
 ## 1. Qué corre y dónde
 
 Cuando ejecutás `npm.cmd run dev`, **Vite** inicia un servidor de desarrollo en tu computadora. El navegador le pide `index.html`, que contiene el contenedor `root` y carga `src/main.tsx`. Ese archivo inicia **React**, que muestra `App` dentro del contenedor.

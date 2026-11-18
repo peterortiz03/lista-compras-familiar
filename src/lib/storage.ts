@@ -30,6 +30,7 @@ export function isShoppingState(value: unknown): value is ShoppingState {
     if (!object(product) || !text(product.id) || !text(product.name) || !unit(product.unit)) return false
     if (product.active !== undefined && typeof product.active !== 'boolean') return false
     if (product.favorite !== undefined && typeof product.favorite !== 'boolean') return false
+    if (product.libraryId != null && (typeof product.libraryId !== 'string' || !/^[a-z0-9-]{1,64}$/.test(product.libraryId))) return false
     if (product.photoPath != null && (typeof product.photoPath !== 'string' || product.photoPath.length > 180)) return false
     if (product.category !== undefined && !isCategory(product.category)) return false
     const name = cleanName(product.name)
