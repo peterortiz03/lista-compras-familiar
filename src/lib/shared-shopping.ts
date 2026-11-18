@@ -13,6 +13,7 @@ export type ShoppingCommand =
   | { type: 'catalog_update'; productId: string; name: string; revision?: string; category?: Category }
   | { type: 'catalog_archive' | 'catalog_restore'; productId: string; revision?: string }
   | { type: 'revert_purchase'; purchaseId: string }
+  | { type: 'void_purchase' | 'delete_purchase'; purchaseId: string; confirmed: true }
   | { type: 'catalog_favorite'; productId: string; favorite: boolean; revision?: string }
   | { type: 'catalog_save_photo'; productId: string; isNew: boolean; name: string; unit: Unit; category: Category; revision?: string; photoPath: string | null; removePhoto: boolean }
 

@@ -5,7 +5,7 @@ import { CATEGORIES } from '../lib/categories.ts'
 import { LIBRARY, libraryMatch } from '../lib/library.ts'
 import { normalizeName } from '../lib/shopping.ts'
 import type { MutationResult, ShoppingCommand } from '../lib/shared-shopping.ts'
-import { CategoryIcon } from './CategoryIcon.tsx'
+import { ProductThumbnail } from './ProductThumbnail.tsx'
 
 export function LibraryPanel({ catalog, onAction, onClose }: {
   catalog: Product[]
@@ -75,11 +75,9 @@ export function LibraryPanel({ catalog, onAction, onClose }: {
       {error && <p role="alert" className="mt-3 text-sm text-red-800">{error}</p>}
       {visible.length === 0 && <p className="py-4 text-sm text-muted">No hay coincidencias en la biblioteca.</p>}
       <ul className="divide-y divide-line" aria-label="Productos de biblioteca">
-        {visible.map(({ entry, match }) => <li key={entry.id}>
-          <label className="flex min-h-14 items-center gap-3 py-2">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-sage text-forest">
-              {entry.image ? <img src={entry.image} alt="" width={40} height={40} loading="lazy" className="object-contain" /> : <CategoryIcon category={entry.category} />}
-            </span>
+        {visible.map(({ entry, match }) => <li key={entry.id} className="flex items-center gap-3 py-2">
+          <ProductThumbnail product={{ id: entry.id, libraryId: entry.id, name: entry.name, category: entry.category, unit: entry.unit }} />
+          <label className="flex min-h-12 min-w-0 flex-1 items-center gap-3">
             <span className="min-w-0 flex-1">
               <span className="block font-semibold">{entry.name}</span>
               <span className="block text-xs text-muted">{UNITS.find(unit => unit.value === entry.unit)?.label} · {entry.category}</span>

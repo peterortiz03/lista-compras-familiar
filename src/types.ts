@@ -32,6 +32,7 @@ export interface PendingItem {
 }
 
 export interface ShoppingState {
+  featuresVersion?: number
   purchaseRevision?: string
   purchaseStats?: PurchaseStat[]
   photoStorage?: boolean
@@ -47,6 +48,7 @@ export interface PurchaseStat {
 }
 
 export interface Purchase {
+  voided?: boolean
   note?: string
   revertedAt?: string | null
   revertedBy?: string | null

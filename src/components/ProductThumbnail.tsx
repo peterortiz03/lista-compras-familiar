@@ -1,9 +1,11 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { flushSync } from 'react-dom'
 import type { FamilyContext, Product } from '../types.ts'
 import { supabase } from '../lib/supabase.ts'
 import { belongsToFamily, PHOTO_BUCKET } from '../lib/product-photos.ts'
 import { CategoryIcon } from './CategoryIcon.tsx'
+import { libraryPhoto } from '../lib/library-photos.ts'
 
 type Entry = { url: string; expires: number }
 type PhotoContext = { familyId: string; get: (path: string) => Promise<string> } | null
@@ -34,9 +36,14 @@ export function ProductPhotoProvider({ family, children }: { family: FamilyConte
 export function ProductThumbnail({ product }: { product: Product }) {
   const photos = useContext(Photos)
   const frame = useRef<HTMLSpanElement>(null)
+  const dialog = useRef<HTMLDialogElement>(null)
+  const [expanded, setExpanded] = useState(false)
   const [url, setUrl] = useState('')
   const [loadedUrl, setLoadedUrl] = useState('')
   const [visible, setVisible] = useState(false)
+  const [brokenDefault, setBrokenDefault] = useState<string>()
+  const [previewError, setPreviewError] = useState(false)
+  const defaultPhoto = libraryPhoto(product)
   const path = product.photoPath
   const familyId = photos?.familyId
   const get = photos?.get
@@ -61,8 +68,46 @@ export function ProductThumbnail({ product }: { product: Product }) {
     window.addEventListener('focus', load)
     return () => { active = false; window.clearInterval(timer); window.removeEventListener('focus', load) }
   }, [path, visible])
-  return <span ref={frame} className="product-thumbnail relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-sage text-forest" aria-hidden="true">
-    <CategoryIcon category={product.category} />
-    {photos && path && url && <img key={url} src={url} alt="" width={48} height={48} loading="lazy" decoding="async" referrerPolicy="no-referrer" className={`absolute inset-0 size-full bg-sage object-contain ${loadedUrl === url ? "opacity-100" : "opacity-0"}`} onLoad={() => setLoadedUrl(url)} onError={() => { setUrl(''); setLoadedUrl('') }} />}
-  </span>
+  const privatePhoto = photos && path ? url : ''
+  const source = privatePhoto || (brokenDefault !== defaultPhoto ? defaultPhoto : undefined)
+  const loaded = !!source && loadedUrl === source
+
+  function openPhoto() {
+    flushSync(() => { setPreviewError(false); setExpanded(true) })
+    dialog.current?.showModal()
+  }
+
+  return <>
+    <span ref={frame} className="product-thumbnail relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-sage text-forest">
+      <CategoryIcon category={product.category} />
+      {source && <img key={source} src={source} alt="" width={48} height={48} loading="lazy" decoding="async"
+        referrerPolicy="no-referrer" className={`absolute inset-0 size-full bg-sage object-contain ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        onLoad={() => setLoadedUrl(source)} onError={() => {
+          setLoadedUrl('')
+          if (privatePhoto) setUrl('')
+          else setBrokenDefault(source)
+        }} />}
+      {loaded && <button type="button" className="absolute inset-0 rounded-xl focus-visible:outline-offset-[-4px]"
+        aria-label={`Ampliar foto de ${product.name}`} onClick={openPhoto} />}
+    </span>
+    {expanded && <dialog ref={dialog} aria-label={`Foto de ${product.name}`}
+      className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-line bg-white p-4 text-ink backdrop:bg-black/55"
+      onClose={() => setExpanded(false)} onClick={event => {
+        if (event.target === event.currentTarget) dialog.current?.close()
+      }}>
+      <div onClick={event => event.stopPropagation()}>
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <h3 className="min-w-0 break-words font-semibold">{product.name}</h3>
+          <button type="button" className="button-secondary" autoFocus onClick={() => dialog.current?.close()}>Cerrar</button>
+        </div>
+        {source && !previewError ? <img src={source} alt={product.name} referrerPolicy="no-referrer"
+          className="max-h-[65dvh] w-full rounded-lg bg-sage object-contain" onError={() => setPreviewError(true)} />
+          : <p role="status" className="p-4 text-sm text-muted">La foto no está disponible en este momento.</p>}
+        {source === '/library/dulce-leche.jpg' && <p className="mt-2 text-xs text-muted">
+          <a className="underline" href="https://commons.wikimedia.org/wiki/File:Cuchara_con_dulce_de_leche.jpg" target="_blank" rel="noreferrer">Foto de jules (stonesoup)</a>
+          {' · '}<a className="underline" href="https://creativecommons.org/licenses/by/2.0/" target="_blank" rel="noreferrer">CC BY 2.0</a>
+        </p>}
+      </div>
+    </dialog>}
+  </>
 }

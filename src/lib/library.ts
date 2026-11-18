@@ -9,7 +9,6 @@ export interface LibraryProduct {
   aliases: string[]
   category: Category
   unit: Unit
-  image?: string
 }
 
 type Entry = [id: string, name: string, unit: Unit, aliases?: string[]]

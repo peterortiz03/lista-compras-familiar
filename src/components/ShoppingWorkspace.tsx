@@ -94,6 +94,20 @@ export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) 
       setNotice('Compra revertida. La cantidad volvió a pendientes.'); setOperationError('')
     } catch (failure) { setOperationError(failure instanceof Error ? failure.message : 'No se pudo revertir la compra.') }
   }
+  async function managePurchase(purchase: Purchase, action: 'void_purchase' | 'delete_purchase') {
+    const deleting = action === 'delete_purchase'
+    const message = deleting
+      ? `¿Eliminar para siempre la compra de ${purchase.name}? Se quitará del historial familiar y de las estadísticas. Esta acción no se puede deshacer. Los pendientes quedan igual.`
+      : `¿Anular la compra de ${purchase.name}? Dejará de contar y quedará visible al mostrar compras corregidas. Los pendientes quedan igual.`
+    if (!window.confirm(message)) return
+    try {
+      await mutate({ type: action, purchaseId: purchase.id, confirmed: true })
+      setNotice(deleting ? 'Compra eliminada del historial.' : 'Compra anulada. Los pendientes quedan igual.')
+      setOperationError('')
+    } catch (failure) {
+      setOperationError(failure instanceof Error ? failure.message : 'No se pudo corregir la compra.')
+    }
+  }
   async function catalogAction(command: ShoppingCommand) { return mutate(command) }
   async function handleImport() {
     const local = loadState(() => window.localStorage)
@@ -126,7 +140,10 @@ export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) 
       <button className="button-secondary" type="button" disabled={disabled} onClick={handleImport}>Importar catálogo y pendientes locales</button>
     </details>}
     <fieldset disabled={disabled} className="min-w-0">
-      {view === 'catalog' ? <Suspense fallback={<p role="status">Cargando catálogo…</p>}><CatalogPanel products={state.catalog} photosEnabled={!!family && !!state.photoStorage} onAction={catalogAction} /></Suspense> : view === 'history' ? ready && <Suspense fallback={<p role="status">Cargando historial…</p>}><PurchaseHistory history={state.history} family={family} revision={state.purchaseRevision} onRevert={handleRevert} /></Suspense> : <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      {view === 'catalog' ? <Suspense fallback={<p role="status">Cargando catálogo…</p>}><CatalogPanel products={state.catalog} photosEnabled={!!family && !!state.photoStorage} onAction={catalogAction} /></Suspense> : view === 'history' ? ready && <Suspense fallback={<p role="status">Cargando historial…</p>}>
+        <PurchaseHistory history={state.history} family={family} revision={state.purchaseRevision} onRevert={handleRevert}
+          onManage={(state.featuresVersion ?? 0) >= 9 && family?.ownerId === family?.userId && family ? managePurchase : undefined} />
+      </Suspense> : <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="order-2 min-w-0 lg:order-1"><ShoppingList state={state} onEdit={handleEdit} onRemove={handleRemove} onBuy={product => setBuying(select(product))} /></div>
         <div className={`${formOpen ? "block" : "hidden"} order-1 min-w-0 lg:sticky lg:top-6 lg:order-2 lg:block`}><ProductForm key={editing?.product.id ?? 'new'} catalog={state.catalog} history={state.history} purchaseStats={state.purchaseStats} pending={state.pending} pendingIds={state.pending.map(item => item.productId)} editing={editing} onAdd={handleAdd} onSave={handleSave} onEdit={handleEdit} onCancel={closeForm} /></div>
       </div>}
