@@ -36,6 +36,13 @@ export function parseSharedState(value: unknown): ShoppingState {
     || value.history.some(item => typeof item.author !== 'string' || typeof item.purchasedBy !== 'string')) {
     throw new Error('La respuesta de la lista familiar es inválida. Revisá la actualización de la base de datos.')
   }
+  if (value.featuresVersion >= 10 && value.shoppingSession !== null) {
+    const session = value.shoppingSession
+    if (!session || typeof session.id !== 'string' || typeof session.startedBy !== 'string' || typeof session.displayName !== 'string'
+      || typeof session.expiresAt !== 'string' || !Number.isFinite(Date.parse(session.expiresAt))) {
+      throw new Error('No pudimos leer el aviso de compra de la familia.')
+    }
+  }
   return value
 }
 

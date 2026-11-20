@@ -36,9 +36,17 @@ export interface ShoppingState {
   purchaseRevision?: string
   purchaseStats?: PurchaseStat[]
   photoStorage?: boolean
+  shoppingSession?: ShoppingSession | null
   history: Purchase[]
   catalog: Product[]
   pending: PendingItem[]
+}
+
+export interface ShoppingSession {
+  id: string
+  startedBy: string
+  displayName: string
+  expiresAt: string
 }
 
 export interface PurchaseStat {
