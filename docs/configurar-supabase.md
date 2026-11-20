@@ -1,5 +1,7 @@
 # Conectar cuentas y familias con Supabase
 
+Para habilitar la guía, el aviso compartido y las notificaciones de supermercado en una instalación existente, seguí [la sección 7](#7-activar-los-avisos-de-supermercado).
+
 La migración de historial y biblioteca (0008) ya se verificó en el proyecto compartido. En un proyecto nuevo, aplicala después de 0007 y antes de publicar el cliente. [Orden y comprobaciones](actualizacion-historial-biblioteca.md).
 
 Actualización: el usuario confirmó 0004 y 0005 (favoritos y administración) y autorizó la publicación; revisá [etapas-bcd.md](etapas-bcd.md). No repitas las migraciones en el proyecto actual.
@@ -77,3 +79,30 @@ El esquema y sus pruebas se verificaron en un PostgreSQL temporal local con una 
 También se comprobó la interfaz en Chrome contra un servidor HTTP local de respuestas simuladas: registro, acceso fallido y exitoso, recuperación de sesión, creación de familia, invitación, incorporación y cierre de sesión. No hubo desbordes a 320, 390 y 1440 px. Esa comprobación valida la interfaz, no el servicio real.
 
 La quinta entrega ya conecta productos, pendientes y compras mediante operaciones transaccionales. Después de esta guía aplicá únicamente la migración 0002 y seguí [sincronizacion.md](sincronizacion.md). No se habilitan escrituras directas a las tablas desde el navegador.
+
+## 7. Activar los avisos de supermercado
+
+La guía interactiva y el asistente de catálogo usan el cliente y las operaciones de catálogo existentes. El aviso dentro de la lista requiere `0010`. El envío push se habilita con `0011`, la Edge Function y la clave pública VAPID en Vercel.
+
+### Orden de activación
+
+1. Con autorización para producción, verificá que la base tenga las migraciones hasta `0009`. Aplicá una vez [0010_shopping_sessions.sql](../supabase/migrations/0010_shopping_sessions.sql) y luego [0011_shopping_web_push.sql](../supabase/migrations/0011_shopping_web_push.sql). El cliente anterior puede seguir consultando el mismo RPC durante el cambio.
+2. Generá un par VAPID para este entorno con `npx web-push@3.6.7 generate-vapid-keys --json`. Guardá el par en el gestor de secretos. Generá también un secreto aleatorio de al menos 32 caracteres para autenticar el trabajo programado.
+3. En **Edge Functions → Secrets**, configurá `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY`, `WEB_PUSH_SUBJECT` con un contacto válido como `mailto:correo@dominio` y `SHOPPING_PUSH_CRON_SECRET`. Supabase proporciona `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` a la función. [Variables de Edge Functions](https://supabase.com/docs/guides/functions/secrets).
+4. Desplegá `send-shopping-push` desde el repositorio con `supabase functions deploy send-shopping-push --project-ref TU_PROYECTO`. `supabase/config.toml` declara que usa el secreto exclusivo de Cron para autenticar la llamada.
+5. Habilitá `pg_cron` y `pg_net`. En **Vault**, guardá `shopping_push_project_url` con `https://TU_PROYECTO.supabase.co` y `shopping_push_cron_secret` con el mismo valor de `SHOPPING_PUSH_CRON_SECRET`. Ejecutá [schedule_shopping_push.sql](../supabase/setup/schedule_shopping_push.sql). El trabajo revisa la cola una vez por minuto. [Cron y Edge Functions](https://supabase.com/docs/guides/functions/schedule-functions).
+6. En Vercel definí `VITE_WEB_PUSH_PUBLIC_KEY` con la misma clave pública y publicá el commit autorizado. Para un cliente local, usá esa variable en `.env.local` y reiniciá Vite. Vercel y Vite solo reciben la clave pública VAPID. [Variables de Vercel](https://vercel.com/docs/environment-variables).
+
+Con el cliente publicado y `0010` aplicada, el aviso dentro de la lista está disponible aunque falte configurar push. Las entregas en cola vencen como máximo cinco minutos después del inicio. Cada dispositivo tiene un intento por sesión. El envío depende de la conectividad y del proveedor push.
+
+### Probar con dos cuentas
+
+1. En un entorno de prueba, creá una familia con la cuenta A y sumá la cuenta B con una invitación. Usá perfiles o dispositivos separados. Completá u omití la guía y el asistente. En ambas cuentas verificá el mismo catálogo y la misma lista.
+2. En B entrá a **Cuenta y familia**, tocá **Activar avisos** y aceptá el permiso. Verificá **Activadas en este dispositivo** y cerrá la pestaña o la app instalada, manteniendo la cuenta iniciada.
+3. En A tocá **Avisar que estoy comprando** y confirmá. En B verificá una sola notificación. Tocala y comprobá que abra la lista, muestre el aviso y permita sumar un pendiente. Si A también tiene los avisos activos, comprobá que no se notifique a sí misma.
+4. Finalizá desde la cuenta que lo inició o desde la cuenta responsable. Verificá que el aviso desaparezca y que el pendiente siga en ambas listas. Si la notificación se toca después de finalizar, aparece la lista habitual con un mensaje de aviso no disponible. Sin finalización manual, verificá su desaparición después de 90 minutos.
+5. Desactivá los avisos en B y repetí. B debe seguir viendo la compra dentro de En casa. Repetí con el permiso bloqueado y con una cuenta de otra familia para comprobar el comportamiento de cada caso.
+
+En **iPhone o iPad con iOS/iPadOS 16.4 o posterior**, abrí el sitio en Safari, elegí **Compartir → Agregar a pantalla de inicio** y abrí En casa desde el ícono. Activá los avisos en **Cuenta y familia**. En **Android**, abrí el sitio HTTPS en un navegador compatible como Chrome y activá los avisos desde la misma opción. Los permisos bloqueados se gestionan desde los ajustes de notificaciones del sitio o del dispositivo. [Web Push en iOS y iPadOS](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/).
+
+Las comprobaciones de PostgreSQL están en [shopping_sessions.sql](../supabase/tests/shopping_sessions.sql) y [shopping_push.sql](../supabase/tests/shopping_push.sql). Usá un entorno de pruebas. Para comprobar el cifrado y la respuesta 410 con un proveedor simulado, ejecutá `deno test --allow-env supabase/functions/send-shopping-push/delivery_test.ts`. La recepción en segundo plano en iPhone y Android requiere dispositivos reales.

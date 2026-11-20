@@ -279,3 +279,15 @@ Safari puede mostrar WebP y no ofrecer el mismo codificador que otro navegador. 
 Esta decisión recorre cliente y servidor. El Blob informa su MIME; la reserva SQL admite únicamente WebP/JPEG y genera una extensión acorde. La subida utiliza ese MIME y la confirmación compara formato reservado, metadata de Storage y extensión, manteniendo los permisos familiares. La migración 0007 añade esta capacidad sin cambiar 0006. Las rutas viejas continúan funcionando y la limpieza no depende del formato.
 
 En el catálogo, una cuadrícula separa el grupo imagen/texto del grupo de botones. En móvil cada grupo tiene su fila; en escritorio comparten espacio. `minmax(0, 1fr)` deja al texto usar el ancho disponible sin desplazar controles fuera de la pantalla. La validación en Chrome con codificador WebP deshabilitado demuestra la alternativa, pero la aceptación de iPhone requiere probar galería, cámara y orientación en ese dispositivo real.
+
+## 20. Entender la guía y los avisos de supermercado
+
+Al recuperar el acceso a una familia, React comprueba en `localStorage` si esa cuenta terminó u omitió la guía. La clave contiene la versión de la guía y el ID de la cuenta. El asistente del catálogo agrega el ID de la familia a su propia clave y aparece tras crear una familia o usar una invitación. Ambos estados pertenecen a ese navegador.
+
+Al avisar que estás comprando, PostgreSQL guarda quién inició el aviso y su fecha de vencimiento. Así la lista puede mostrarlo a todos mediante la sincronización habitual. Si otra persona intenta iniciar al mismo tiempo, el servidor serializa las operaciones y queda un solo aviso. Finalizarlo deja los pendientes disponibles para seguir trabajando.
+
+El aviso dentro de En casa aparece al actualizar la lista. Una notificación push llega por medio del navegador y puede aparecer en la pantalla del dispositivo con En casa cerrada. Un **service worker** es un pequeño script que el navegador puede activar en segundo plano para mostrar el aviso y abrir la app al tocarlo. En casa lo utiliza para esos dos eventos.
+
+Cada dispositivo pide autorización cuando elegís **Activar avisos**. Si el navegador la concede, entrega una suscripción con una dirección de su servicio push y claves para cifrar mensajes. Supabase la guarda para esa cuenta y ese dispositivo. Al iniciar una compra, el servidor determina los destinatarios y la Edge Function envía un aviso cifrado a los dispositivos habilitados.
+
+**VAPID** identifica y autentica a En casa ante el proveedor push. El navegador recibe la clave pública al suscribirse. La clave privada firma cada solicitud de envío y queda en la Edge Function, donde el navegador no puede leerla. [Estándar VAPID](https://www.rfc-editor.org/rfc/rfc8292.html).

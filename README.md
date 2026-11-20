@@ -1,5 +1,7 @@
 # Lista de Compras Familiar
 
+**Guía y avisos de supermercado.** En el primer acceso familiar aparece una guía de cinco pasos, disponible también desde **Ayuda**. Al crear o unirse a una familia, se puede preparar el catálogo desde la biblioteca argentina o con productos propios. En **Lista**, un integrante puede avisar que está comprando durante un máximo de 90 minutos. Los demás pueden seguir agregando faltantes y activar avisos push por dispositivo en **Cuenta y familia**. [Activación y prueba con dos cuentas](docs/configurar-supabase.md#7-activar-los-avisos-de-supermercado).
+
 Las 60 fichas de biblioteca tienen fotos ampliables. El responsable de la familia puede anular o eliminar compras. La migración 0009 ya se verificó en el proyecto compartido. [Guía de activación y prueba](docs/fotos-biblioteca-e-historial.md).
 
 El historial empieza con tres días de Buenos Aires y se amplía a demanda. La biblioteca ofrece 60 productos para incorporar al catálogo por selección. La migración 0008 ya se verificó en el proyecto compartido. [Activación y pruebas](docs/actualizacion-historial-biblioteca.md).
@@ -15,7 +17,7 @@ El historial empieza con tres días de Buenos Aires y se amplía a demanda. La b
 ## Requisitos y ejecución en Windows
 
 - Node.js 22.18 o superior compatible con Vite, preferentemente LTS vigente; npm y un navegador moderno.
-- Para compartir con este código: un proyecto Supabase con 0001–0005 aplicadas y `.env.local` configurado. El usuario confirmó todas las migraciones en el proyecto actual; sin Supabase se puede usar la copia local.
+- Para usar la lista compartida, configurá `.env.local` y aplicá las migraciones en orden en un proyecto Supabase. El aviso dentro de la lista requiere 0010. Las notificaciones push requieren 0011 y configuración adicional. La copia local funciona por separado.
 - Para fotos familiares: 0006 y Storage privado con limpieza programada, según [fotografias.md](docs/fotografias.md). No hay variables nuevas de frontend ni fotos en modo local. Sin 0006 el catálogo anterior sigue operativo.
 
 Desde PowerShell:
@@ -74,15 +76,13 @@ npm.cmd run lint
 npm.cmd test
 ```
 
-Son 24 casos de lógica con el ejecutor de Node. También hay pruebas transaccionales de permisos y compras en `supabase/tests/`, para SQL Editor como administrador, con `ROLLBACK` final. No se agregó un framework de pruebas ni dependencias nuevas en esta entrega.
+Son 31 casos de lógica con el ejecutor de Node. Las pruebas transaccionales de `supabase/tests/` corresponden a la migración de cada función y terminan con `ROLLBACK`. La función push tiene dos pruebas de envío simulado en Deno, detalladas en la [guía de Supabase](docs/configurar-supabase.md#7-activar-los-avisos-de-supermercado).
 
 Se probaron las migraciones en PostgreSQL temporal y la interfaz con dos cuentas aisladas y un servidor local conectado a ese motor. La API real reconoce la función nueva y rechaza el acceso anónimo; el usuario confirmó la configuración de cuentas y la ejecución de 0002. Eso no equivale a haber accedido a sus sesiones ni probado compras reales en su proyecto.
 
 Para abrir el build local: `npm.cmd run preview`, después de `build`. No publica la aplicación.
 
-## Próximos pasos y alcance
-
-La publicación queda preparada con `vercel.json` y su guía; requiere crear la cuenta Vercel, conectar GitHub y configurar las variables y URLs de Auth. No se publicó automáticamente. Después continuaremos probando con cuentas reales y ajustando lo necesario, incluida recuperación de contraseña y, en otra entrega, PWA. No se implementan precios, comercios, notificaciones, inventario exacto, códigos de barras ni tickets. El historial y el catálogo aún se recuperan completos; paginación y retención de solicitudes se revisarán si crece su volumen.
+## Documentación del proyecto
 
 - [Decisiones](docs/decisiones.md)
 - [Guía de aprendizaje](docs/guia-aprendizaje.md)
@@ -103,6 +103,6 @@ Se probaron las tres migraciones y sus suites SQL en PostgreSQL temporal, diecin
 - Estrellas compartidas en Catálogo, sugerencias compactas con frecuencia/recencia y compartir lista sin datos de integrantes.
 - Responsable: quitar integrantes y gestionar invitación activa. Integrantes: abandonar. Se conservan cuentas y compras históricas; no se permite salir al responsable.
 - Recuperación de sesión antes de mostrar la lista, sin destello de la copia local.
-- Manifiesto e íconos para instalación PWA desde un navegador compatible. Se necesita conexión; no hay service worker, cola offline ni caché de respuestas familiares.
+- Manifiesto e íconos para instalación PWA desde un navegador compatible. La lista compartida requiere conexión. El service worker gestiona exclusivamente la recepción y apertura de notificaciones push.
 
-Las pruebas actuales son 24 casos Node, suites SQL y comprobaciones de navegador descritas en [etapas-bcd.md](docs/etapas-bcd.md). El usuario confirmó 0005 y autorizó commit, push y publicación. No repitas las migraciones; después del despliegue verificá las funciones con las cuentas reales.
+Las pruebas y la activación de aquella entrega se describen en [etapas-bcd.md](docs/etapas-bcd.md).

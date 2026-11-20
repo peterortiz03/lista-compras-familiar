@@ -1,5 +1,13 @@
 # Decisiones del proyecto
 
+## Guía, catálogo inicial y avisos de supermercado
+
+- La guía espera a que Auth confirme la familia. Guarda la decisión por usuario en `localStorage` con una clave versionada. Ayuda abre siempre el primer paso. El asistente de catálogo se ofrece después de que la API confirme la creación o el ingreso por invitación y guarda la decisión por usuario y familia en el mismo navegador.
+- La configuración inicial reutiliza el formulario del catálogo y la importación de la biblioteca. Los productos recuperados conservan sus datos. Cada alta se guarda al confirmarla y los faltantes se agregan desde Lista.
+- `0010` guarda una sesión por familia y fija su vencimiento en el servidor. Las altas y bajas de integrantes usan el mismo bloqueo. El iniciador y el responsable pueden finalizar el ID vigente. El aviso viaja con `get_family_list` y el cliente mantiene su ciclo de actualización.
+- `0011` registra suscripciones privadas por cuenta y dispositivo. El inicio de una sesión encola entregas para los integrantes suscritos, excluido el iniciador. Cron llama a la Edge Function, que reclama cada entrega una sola vez, valida vigencia y usa Web Push con VAPID. Las fallas de entrega consumen ese intento. Las respuestas 404 y 410 dan de baja la revisión del dispositivo afectado.
+- El service worker muestra la notificación y abre la lista sobre el mismo origen. En ese momento Supabase verifica la sesión familiar y el aviso activo. El worker funciona sin almacenar contenido de la app. [Configuración en Supabase y Vercel](configurar-supabase.md#7-activar-los-avisos-de-supermercado).
+
 ## Historial por períodos y biblioteca argentina
 
 - La sincronización consulta `get_family_list` para catálogo y pendientes. Una revisión de compras indica cuándo recalcular y enviar frecuencia y recencia de todo el historial vigente.
@@ -33,7 +41,7 @@
 - Salida/eliminación quitan solo la membresía. El historial conserva una instantánea del nombre y referencia la cuenta Auth. La migración no elimina registros por sí sola; los cambios de membresía se ejecutan solo ante confirmación del usuario.
 - Revocar acceso se comprueba en SQL incluso después de esperar un bloqueo. El cliente vacía datos al recibir rechazo y revisa la familia periódicamente. El responsable no puede eliminarse ni abandonar sin transferencia, que no se implementa.
 - La sesión la persiste y renueva el SDK; se espera su recuperación y la familia antes de mostrar un espacio de compras. Se mantiene cierre explícito y no se almacenan contraseñas manualmente.
-- El manifiesto y los íconos hacen instalable la web sin agregar caché. No se incorpora service worker porque no se requiere para esta instalación y no queremos servir datos privados desde caché ni prometer uso offline.
+- En esa entrega, la instalación se habilitó con el manifiesto y los íconos de la app. El service worker se incorporó más adelante para los avisos push.
 - Se mantiene el sobre histórico schemaVersion 3 y se agregan capacidades con featuresVersion 5. Es necesario para que el cliente ya publicado tolere campos nuevos; las capacidades aditivas futuras pueden ampliarse sin cambiar el contrato base.
 - Validado con 24 pruebas Node, PostgreSQL temporal, dos cuentas simuladas en Chrome y diagnóstico normal de instalación sin errores. El usuario confirmó la ejecución de 0005 y autorizó commit, push y publicación. Quedan las pruebas de aceptación con cuentas reales después del despliegue.
 
