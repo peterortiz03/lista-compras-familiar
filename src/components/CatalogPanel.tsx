@@ -1,95 +1,46 @@
 import { lazy, Suspense, useRef, useState } from 'react'
-import { flushSync } from 'react-dom'
-import type { FormEvent } from 'react'
 import { UNITS } from '../types.ts'
-import type { Product, Unit } from '../types.ts'
-import { cleanName, normalizeName } from '../lib/shopping.ts'
-import { CATEGORIES, suggestCategory } from '../lib/categories.ts'
-import type { Category } from '../lib/categories.ts'
+import type { Product } from '../types.ts'
+import { normalizeName } from '../lib/shopping.ts'
 import type { MutationResult, ShoppingCommand } from '../lib/shared-shopping.ts'
-import { CatalogPhotoField } from './CatalogPhotoField.tsx'
 import { ProductThumbnail } from './ProductThumbnail.tsx'
-import { cleanupPhotos, reservePhoto, uploadPhoto } from '../lib/product-photos.ts'
-import { supabase } from '../lib/supabase.ts'
+import { CatalogProductForm } from './CatalogProductForm.tsx'
 
 const LibraryPanel = lazy(() => import('./LibraryPanel.tsx').then(module => ({ default: module.LibraryPanel })))
 
-export function CatalogPanel({ products, photosEnabled, onAction }: { products: Product[]; photosEnabled: boolean; onAction: (command: ShoppingCommand) => Promise<MutationResult> }) {
+export function CatalogPanel({ products, photosEnabled, onAction, onSetup }: {
+  products: Product[]; photosEnabled: boolean; onAction: (command: ShoppingCommand) => Promise<MutationResult>; onSetup?: () => void
+}) {
   const [query, setQuery] = useState('')
   const [showRemoved, setShowRemoved] = useState(false)
-  const [formOpen, setFormOpen] = useState(false)
+  const [form, setForm] = useState<{ product: Product | null; revision: number } | null>(null)
   const [libraryOpen, setLibraryOpen] = useState(false)
-  const nameInput = useRef<HTMLInputElement>(null)
   const previousFocus = useRef<HTMLElement | null>(null)
-  const [editing, setEditing] = useState<Product | null>(null)
-  const [name, setName] = useState('')
-  const [unit, setUnit] = useState<Unit>('unidad')
-  const [category, setCategory] = useState<Category | null>(null)
   const [busy, setBusy] = useState(false)
+  const [formWorking, setFormWorking] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [photo, setPhoto] = useState<Blob | null>(null)
-  const [removePhoto, setRemovePhoto] = useState(false)
-  const [processing, setProcessing] = useState(false)
-  const [draftId, setDraftId] = useState(() => crypto.randomUUID())
-  const uploaded = useRef<{ blob: Blob; path: string } | null>(null)
+
   function closeForm() {
-    setFormOpen(false)
+    setForm(null)
     const target = previousFocus.current
     requestAnimationFrame(() => target?.focus())
-  }
-  function reset() {
-    setEditing(null); setName(''); setUnit('unidad'); setCategory(null)
-    setPhoto(null); setRemovePhoto(false); uploaded.current = null; setDraftId(crypto.randomUUID())
   }
 
   function openForm(trigger: HTMLElement, product: Product | null) {
     previousFocus.current = trigger
-    flushSync(() => {
-      reset()
-      setFormOpen(true)
-      setEditing(product)
-      setCategory(product?.category ?? null)
-      setName(product?.name ?? '')
-      setUnit(product?.unit ?? 'unidad')
-      setError('')
-    })
-    nameInput.current?.focus()
+    setNotice('')
+    setError('')
+    setForm(current => ({ product, revision: (current?.revision ?? 0) + 1 }))
   }
   const visible = products.filter(product => (showRemoved || product.active !== false) && normalizeName(product.name).includes(normalizeName(query)))
-
-  async function save(event: FormEvent) {
-    event.preventDefault()
-    if (!cleanName(name)) { setError('Ingresá un nombre de producto.'); return }
-    if (busy || processing) return
-    setBusy(true); setError(''); setNotice('')
-    try {
-      if (photosEnabled && supabase && (photo || removePhoto)) {
-        const productId = editing?.id ?? draftId
-        let path: string | null = null
-        if (photo) {
-          if (uploaded.current?.blob === photo) path = uploaded.current.path
-          else {
-            path = await reservePhoto(supabase, productId, editing?.revision, !editing, photo.type)
-            setNotice('Subiendo fotografía…')
-            await uploadPhoto(supabase, path, photo)
-            uploaded.current = { blob: photo, path }
-          }
-        }
-        await onAction({ type: 'catalog_save_photo', productId, isNew: !editing, name, unit, category: category ?? suggestCategory(name), revision: editing?.revision, photoPath: path, removePhoto })
-        void cleanupPhotos(supabase).catch(() => {})
-      } else await onAction(editing ? { type: 'catalog_update', productId: editing.id, name, category: category ?? suggestCategory(name), revision: editing.revision } : { type: 'catalog_add', name, unit, category: category ?? suggestCategory(name) })
-      reset(); closeForm(); setNotice('Producto guardado en el catálogo.')
-    } catch (failure) { setNotice(''); setError(failure instanceof Error ? failure.message : 'No se pudo guardar el producto.') }
-    finally { setBusy(false) }
-  }
 
   async function toggle(product: Product) {
     if (product.active !== false && !window.confirm(`¿Quitar ${product.name} de las sugerencias? Sus pendientes y compras se conservan. Podrás recuperarlo desde este catálogo.`)) return
     setBusy(true); setError(''); setNotice('')
     try {
       await onAction({ type: product.active === false ? 'catalog_restore' : 'catalog_archive', productId: product.id, revision: product.revision })
-      if (editing?.id === product.id) { reset(); closeForm() }
+      if (form?.product?.id === product.id) closeForm()
       setNotice(product.active === false ? 'Producto recuperado en las sugerencias.' : 'Producto quitado de las sugerencias.')
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'No se pudo modificar el producto.') }
     finally { setBusy(false) }
@@ -114,25 +65,18 @@ export function CatalogPanel({ products, photosEnabled, onAction }: { products: 
     <p className="mt-2 text-sm text-muted">Todos los productos conocidos, sin controlar stock. Los activos aparecen como sugerencias al agregar un faltante.</p>
     {error && <p role="alert" className="mt-4 text-sm text-red-800">{error}</p>}
     <p role="status" className={notice ? 'mt-4 text-sm text-forest' : 'sr-only'}>{notice}</p>
-    <fieldset disabled={busy || processing} className="mt-5 min-w-0 space-y-5">
+    <fieldset disabled={busy || formWorking} className="mt-5 min-w-0 space-y-5">
       <div className="flex flex-wrap gap-2">
         <div className="min-w-0 flex-1 basis-44"><label className="field-label" htmlFor="catalog-search">Buscar en el catálogo</label><input className="field" id="catalog-search" type="search" value={query} onChange={event => setQuery(event.target.value)} /></div>
         <button type="button" className="button-primary self-end" onClick={event => openForm(event.currentTarget, null)}>Crear producto</button>
         <button id="explore-library" type="button" className="button-secondary self-end" onClick={() => {
-          reset(); setFormOpen(false); setLibraryOpen(true); setNotice('')
+          setForm(null); setLibraryOpen(true); setNotice('')
         }}>Explorar biblioteca</button>
+        {onSetup && <button type="button" className="button-secondary self-end" onClick={onSetup}>Preparar catálogo</button>}
       </div>
-      {formOpen && <form onSubmit={save} noValidate className="rounded-xl border border-line bg-sage p-4">
-        <h3 className="mb-4 font-semibold">{editing ? 'Editar producto' : 'Crear un producto'}</h3>
-        <div className="grid gap-4 sm:grid-cols-2"><div><label className="field-label" htmlFor="catalog-name">Nombre</label><input className="field" id="catalog-name" ref={nameInput} value={name} maxLength={80} onChange={event => { setName(event.target.value); setError('') }} /></div><div><label className="field-label" htmlFor="catalog-unit">Unidad</label><select className="field" id="catalog-unit" value={unit} disabled={!!editing} onChange={event => setUnit(event.target.value as Unit)}>{UNITS.map(entry => <option key={entry.value} value={entry.value}>{entry.label}</option>)}</select></div></div>
-        <div className="mt-4"><label className="field-label" htmlFor="catalog-category">Categoría</label><select id="catalog-category" className="field" value={category ?? suggestCategory(name)} onChange={event => setCategory(event.target.value as Category)}>{CATEGORIES.map(entry => <option key={entry}>{entry}</option>)}</select></div>
-        {photosEnabled && <CatalogPhotoField key={editing?.id ?? draftId} product={editing} blob={photo} removed={removePhoto} onChange={(blob, removed) => { setPhoto(blob); setRemovePhoto(removed); uploaded.current = null }} onProcessing={setProcessing} />}
-        <p className="mt-3 text-xs text-muted">Crear aquí no agrega un pendiente. La unidad se define al crear y se conserva para evitar conversiones de compras anteriores.</p>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <button className="button-primary">{busy ? 'Guardando…' : editing ? 'Guardar producto' : 'Crear producto'}</button>
-          <button className="button-secondary" type="button" onClick={() => { reset(); closeForm(); setError('') }}>Cancelar</button>
-        </div>
-      </form>}
+      {form && <CatalogProductForm key={form.revision} product={form.product} photosEnabled={photosEnabled}
+        onAction={onAction} onCancel={closeForm} onWorkingChange={setFormWorking}
+        onSave={() => { closeForm(); setNotice('Producto guardado en el catálogo.') }} />}
       <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm"><input className="size-5" type="checkbox" checked={showRemoved} onChange={event => setShowRemoved(event.target.checked)} />Mostrar también productos quitados</label>
       <ul className="divide-y divide-line" aria-label="Productos del catálogo">{visible.map(product => <li key={product.id} className="catalog-product grid items-center gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto]">
         <div className="flex min-w-0 items-center gap-3"><ProductThumbnail key={product.photoPath} product={product} />

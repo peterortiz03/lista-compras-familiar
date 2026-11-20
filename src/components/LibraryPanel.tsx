@@ -7,16 +7,20 @@ import { normalizeName } from '../lib/shopping.ts'
 import type { MutationResult, ShoppingCommand } from '../lib/shared-shopping.ts'
 import { ProductThumbnail } from './ProductThumbnail.tsx'
 
-export function LibraryPanel({ catalog, onAction, onClose }: {
+export function LibraryPanel({ catalog, onAction, onClose, onImport, disabled, backLabel = 'Volver al catálogo' }: {
   catalog: Product[]
   onAction: (command: ShoppingCommand) => Promise<MutationResult>
   onClose: (notice?: string) => void
+  onImport?: (count: number) => void
+  disabled?: boolean
+  backLabel?: string
 }) {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('')
   const [selected, setSelected] = useState(new Map<string, string | null>())
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const search = normalizeName(query)
   const rows = LIBRARY.map(entry => ({ entry, match: libraryMatch(entry, catalog) }))
   const visible = rows.filter(({ entry }) => (!category || entry.category === category)
@@ -26,6 +30,7 @@ export function LibraryPanel({ catalog, onAction, onClose }: {
   async function addSelection() {
     setBusy(true)
     setError('')
+    setNotice('')
     try {
       const products = LIBRARY.flatMap(entry => {
         if (!selected.has(entry.id)) return []
@@ -38,7 +43,12 @@ export function LibraryPanel({ catalog, onAction, onClose }: {
       })
       const result = await onAction({ type: 'catalog_library', products })
       if (result.kind !== 'library') throw new Error('No pudimos confirmar la incorporación.')
-      onClose(`Agregados ${result.added} · Omitidos ${result.skipped} · Recuperados ${result.restored}`)
+      const message = `Agregados ${result.added} · Omitidos ${result.skipped} · Recuperados ${result.restored}`
+      if (onImport) {
+        setSelected(new Map())
+        setNotice(message)
+        onImport(result.added + result.restored)
+      } else onClose(message)
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'No se pudo agregar la selección.')
     } finally { setBusy(false) }
@@ -47,9 +57,9 @@ export function LibraryPanel({ catalog, onAction, onClose }: {
   return <section className="surface p-5 sm:p-6" aria-labelledby="library-title">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h2 id="library-title" className="text-xl font-bold">Biblioteca argentina</h2>
-      <button type="button" className="button-secondary" onClick={() => onClose()} disabled={busy}>Volver al catálogo</button>
+      <button type="button" className="button-secondary" onClick={() => onClose()} disabled={busy}>{backLabel}</button>
     </div>
-    <fieldset disabled={busy} className="mt-4 min-w-0">
+    <fieldset disabled={busy || disabled} className="mt-4 min-w-0">
       <div className="grid gap-3 sm:grid-cols-2">
         <div><label className="field-label" htmlFor="library-search">Buscar productos</label>
           <input id="library-search" type="search" className="field" value={query} onChange={event => setQuery(event.target.value)} /></div>
@@ -72,6 +82,7 @@ export function LibraryPanel({ catalog, onAction, onClose }: {
           {busy ? 'Agregando…' : `Agregar ${selected.size} al catálogo`}
         </button>
       </div>
+      {notice && <p role="status" className="mt-3 rounded-lg bg-sage p-3 text-sm text-forest">{notice}</p>}
       {error && <p role="alert" className="mt-3 text-sm text-red-800">{error}</p>}
       {visible.length === 0 && <p className="py-4 text-sm text-muted">No hay coincidencias en la biblioteca.</p>}
       <ul className="divide-y divide-line" aria-label="Productos de biblioteca">

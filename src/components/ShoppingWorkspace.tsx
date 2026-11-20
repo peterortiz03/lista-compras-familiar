@@ -11,8 +11,10 @@ import { PurchaseDialog } from './PurchaseDialog.tsx'
 import { Icon } from './Icon.tsx'
 import { ShareList } from './ShareList.tsx'
 import { ProductPhotoProvider } from './ProductThumbnail.tsx'
+import { getCatalogSetup, saveCatalogSetup } from '../lib/onboarding.ts'
 
 const CatalogPanel = lazy(() => import('./CatalogPanel.tsx').then(module => ({ default: module.CatalogPanel })))
+const CatalogSetup = lazy(() => import('./CatalogSetup.tsx').then(module => ({ default: module.CatalogSetup })))
 const PurchaseHistory = lazy(() => import('./PurchaseHistory.tsx').then(module => ({ default: module.PurchaseHistory })))
 
 function subscribeToConnection(callback: () => void) {
@@ -26,13 +28,15 @@ function subscribeToConnection(callback: () => void) {
 
 interface Selection { product: Product; quantity: number; version?: string; note?: string; urgent?: boolean }
 
-export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) {
+export function ShoppingWorkspace({ family, guideOpen }: { family: FamilyContext | null; guideOpen: boolean }) {
   const { state, error, ready, busy, lastSync, refresh, mutate } = useShoppingData(family)
   const [editing, setEditing] = useState<Selection | null>(null)
   const [buying, setBuying] = useState<Selection | null>(null)
   const [notice, setNotice] = useState('')
   const [operationError, setOperationError] = useState('')
   const [view, setView] = useState<'list' | 'catalog' | 'history'>('list')
+  const [setup, setSetup] = useState(() => family ? getCatalogSetup(family.userId, family.id) : null)
+  const [manualSetup, setManualSetup] = useState(false)
 
   const [formOpen, setFormOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -120,6 +124,22 @@ export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) 
   }
 
   const disabled = busy || !ready || (!!family && (!online || !!error))
+  if (family && (setup || manualSetup)) return <ProductPhotoProvider family={family}>
+    <div hidden={guideOpen}>
+      {error && <p role="alert" className="mb-3 text-sm text-red-800">{error}</p>}
+      <Suspense fallback={<p role="status">Cargando configuración del catálogo…</p>}>
+        <CatalogSetup kind={setup ?? 'manual'} products={state.catalog} photosEnabled={!!state.photoStorage}
+          disabled={!ready || !online || !!error} visible={!guideOpen} onAction={catalogAction}
+          onComplete={() => saveCatalogSetup(family.userId, family.id, 'completed')} onExit={(outcome, nextView) => {
+            saveCatalogSetup(family.userId, family.id, outcome)
+            setSetup(null)
+            setManualSetup(false)
+            setView(nextView)
+            requestAnimationFrame(() => document.getElementById(`shopping-${nextView}`)?.focus())
+          }} />
+      </Suspense>
+    </div>
+  </ProductPhotoProvider>
   return <ProductPhotoProvider family={family}><section aria-label={family ? `Lista familiar de ${family.name}` : 'Lista local'}>
     {family ? <details className="mb-2 text-sm text-forest">
       <summary className="min-h-11 cursor-pointer py-3">
@@ -133,14 +153,15 @@ export function ShoppingWorkspace({ family }: { family: FamilyContext | null }) 
     {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-4 text-sm text-red-800">{error}{family && ' Se mantienen los últimos datos confirmados; las operaciones quedan deshabilitadas hasta recuperar la conexión.'}</p>}
     {operationError && <p role="alert" className="mb-4 text-sm text-red-800">{operationError}</p>}
     <p role="status" aria-live="polite" className={notice ? 'mb-4 rounded-xl bg-sage p-3 text-sm text-forest' : 'sr-only'}>{notice}</p>
-    <nav aria-label="Secciones de compras" className="mb-5 flex flex-wrap gap-3">{([{ id: 'list', label: 'Lista' }, { id: 'catalog', label: 'Catálogo' }, { id: 'history', label: 'Historial' }] as const).map(entry => <button key={entry.id} className={view === entry.id ? 'button-primary' : 'button-secondary'} type="button" aria-pressed={view === entry.id} onClick={() => { setView(entry.id); setEditing(null); setFormOpen(false); setOperationError('') }}>{entry.label}</button>)}</nav>
+    <nav aria-label="Secciones de compras" className="mb-5 flex flex-wrap gap-3">{([{ id: 'list', label: 'Lista' }, { id: 'catalog', label: 'Catálogo' }, { id: 'history', label: 'Historial' }] as const).map(entry => <button key={entry.id} id={`shopping-${entry.id}`} className={view === entry.id ? 'button-primary' : 'button-secondary'} type="button" aria-pressed={view === entry.id} onClick={() => { setView(entry.id); setEditing(null); setFormOpen(false); setOperationError('') }}>{entry.label}</button>)}</nav>
     {view === 'list' && <button id="open-product-form" type="button" className="button-primary mb-3" disabled={disabled} onClick={() => openForm(null)}><Icon name="plus" size={18} />Agregar faltante</button>}
     {view === 'catalog' && family && ready && state.catalog.length === 0 && <details className="mb-3 text-sm">
       <summary className="min-h-11 cursor-pointer py-3 text-forest">Copiar datos de este dispositivo</summary>
       <button className="button-secondary" type="button" disabled={disabled} onClick={handleImport}>Importar catálogo y pendientes locales</button>
     </details>}
     <fieldset disabled={disabled} className="min-w-0">
-      {view === 'catalog' ? <Suspense fallback={<p role="status">Cargando catálogo…</p>}><CatalogPanel products={state.catalog} photosEnabled={!!family && !!state.photoStorage} onAction={catalogAction} /></Suspense> : view === 'history' ? ready && <Suspense fallback={<p role="status">Cargando historial…</p>}>
+      {view === 'catalog' ? <Suspense fallback={<p role="status">Cargando catálogo…</p>}><CatalogPanel products={state.catalog} photosEnabled={!!family && !!state.photoStorage} onAction={catalogAction}
+        onSetup={family ? () => setManualSetup(true) : undefined} /></Suspense> : view === 'history' ? ready && <Suspense fallback={<p role="status">Cargando historial…</p>}>
         <PurchaseHistory history={state.history} family={family} revision={state.purchaseRevision} onRevert={handleRevert}
           onManage={(state.featuresVersion ?? 0) >= 9 && family?.ownerId === family?.userId && family ? managePurchase : undefined} />
       </Suspense> : <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">

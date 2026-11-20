@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FamilyContext } from '../types.ts'
 import type { FormEvent } from 'react'
 import type { Session, SupabaseClient } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase.ts'
+import { saveCatalogSetup } from '../lib/onboarding.ts'
 
 export function AccountPanel({ onFamilyChange, onResolvingChange }: { onResolvingChange: (resolving: boolean) => void; onFamilyChange: (family: FamilyContext | null) => void }) {
   return <section className="surface mb-7 p-5 sm:p-6" aria-labelledby="account-title">
@@ -99,11 +100,12 @@ function FamilyPanel({ client, userId, onFamilyChange, onResolvingChange }: { cl
   const [invite, setInvite] = useState('')
   const [inviteExpires, setInviteExpires] = useState('')
   const [refresh, setRefresh] = useState(0)
+  const joining = useRef(false)
   useEffect(() => {
     let active = true
     let inFlight = false
     async function load() {
-      if (inFlight) return
+      if (inFlight || joining.current) return
       inFlight = true
       try {
         const result = await client.from('families').select('id,name,owner_id').abortSignal(AbortSignal.timeout(12000)).maybeSingle()
@@ -121,7 +123,7 @@ function FamilyPanel({ client, userId, onFamilyChange, onResolvingChange }: { cl
           if (response.error) throw response.error
           invitation = response.data
         }
-        if (active) {
+        if (active && !joining.current) {
           setInvite(invitation?.token ?? ''); setInviteExpires(invitation?.expiresAt ?? '')
           setError('')
           onResolvingChange(false)
@@ -140,17 +142,20 @@ function FamilyPanel({ client, userId, onFamilyChange, onResolvingChange }: { cl
 
   async function action(event: FormEvent<HTMLFormElement>, kind: 'create' | 'join') {
     event.preventDefault()
+    if (joining.current) return
     const values = new FormData(event.currentTarget)
     const display = String(values.get('display_name')).trim()
+    joining.current = true
     setBusy(true); setError('')
     try {
       const result = kind === 'create'
         ? await client.rpc('create_family', { p_name: String(values.get('family_name')).trim(), p_display_name: display })
         : await client.rpc('join_family', { p_token: String(values.get('token')).trim(), p_display_name: display })
       if (result.error) { setError('No se pudo completar la operación. Actualizá antes de reintentar; la invitación puede ser inválida, usada o estar vencida.'); return }
+      if (typeof result.data === 'string') saveCatalogSetup(userId, result.data, kind)
       setLoaded(false); setRefresh(value => value + 1)
     } catch { setError('No pudimos conectar. Actualizá antes de repetir la operación.') }
-    finally { setBusy(false) }
+    finally { joining.current = false; setBusy(false) }
   }
 
   async function generateInvite() {

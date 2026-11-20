@@ -10,6 +10,11 @@ const paths = {
   arrow: <path d="M5 12h14m-6-6 6 6-6 6" />,
   leaf: <><path d="M20 4C8 2 2 8 6 16c8 4 14-2 14-12Z" /><path d="M4 20 15 9" /></>,
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v6m0-10v.1" /></>,
+  help: <><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .7-1.5 1.2-1.5 2.5m0 3v.1" /></>,
+  list: <path d="M9 6h11M9 12h11M9 18h11M4 6h.1M4 12h.1M4 18h.1" />,
+  catalog: <><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M4 10h16m-8 0v10" /></>,
+  history: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+  family: <><circle cx="9" cy="7" r="3" /><path d="M3 20v-2a6 6 0 0 1 12 0v2M17 4.2a3 3 0 0 1 0 5.6m4 10.2v-2a6 6 0 0 0-3-5.2" /></>,
 } as const
 
 export function Icon({ name, size = 20, style }: { name: keyof typeof paths; size?: number; style?: CSSProperties }) {
