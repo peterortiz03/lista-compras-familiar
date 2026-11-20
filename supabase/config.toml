@@ -1,2 +1,6 @@
 [functions.cleanup-product-photos]
 verify_jwt = false
+
+[functions.send-shopping-push]
+# El trabajo de Cron usa un secreto propio de esta función, validado dentro del worker.
+verify_jwt = false

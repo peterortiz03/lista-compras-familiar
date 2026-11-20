@@ -4,6 +4,8 @@ import type { FormEvent } from 'react'
 import type { Session, SupabaseClient } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase.ts'
 import { saveCatalogSetup } from '../lib/onboarding.ts'
+import { unregisterPushOnSignOut } from '../lib/web-push.ts'
+import { ShoppingPushSettings } from './ShoppingPushSettings.tsx'
 
 export function AccountPanel({ onFamilyChange, onResolvingChange }: { onResolvingChange: (resolving: boolean) => void; onFamilyChange: (family: FamilyContext | null) => void }) {
   return <section className="surface mb-7 p-5 sm:p-6" aria-labelledby="account-title">
@@ -62,6 +64,7 @@ function Account({ client, onFamilyChange, onResolvingChange }: { client: Supaba
   async function signOut() {
     setBusy(true); setError(''); setMessage('')
     try {
+      await unregisterPushOnSignOut(client)
       const result = await client.auth.signOut({ scope: 'local' })
       if (result.error) setError('No se pudo cerrar la sesión. Intentá de nuevo.')
       else { setSession(null); onFamilyChange(null) }
@@ -189,6 +192,7 @@ function FamilyPanel({ client, userId, onFamilyChange, onResolvingChange }: { cl
       {family.owner_id === userId && <><button className="button-primary mt-4" disabled={busy} onClick={generateInvite}>Generar invitación</button><p className="mt-2 text-xs text-muted">Se usa una vez y vence en 7 días. Generar otra invalida la anterior. Compartila solo con la persona que quieras incorporar.</p></>}
       {family.owner_id !== userId && <button className="button-secondary mt-4" disabled={busy} onClick={() => void manage('leave')}>Abandonar familia</button>}
       {invite && <div className="mt-3"><label className="field-label" htmlFor="family-invite">Código de invitación</label><input className="field" id="family-invite" readOnly value={invite} onFocus={event => event.target.select()} /><p className="mt-2 text-xs text-muted">{inviteExpires ? `Vence: ${new Date(inviteExpires).toLocaleString('es-AR')}` : ''}</p><button className="button-secondary mt-2" disabled={busy} onClick={() => void manage('revoke_invite')}>Revocar invitación</button></div>}
+      <ShoppingPushSettings key={family.id} client={client} />
     </> : <div className="grid gap-6 md:grid-cols-2">
       <form onSubmit={event => action(event, 'create')} className="space-y-3"><h3 className="font-bold">Crear una familia</h3><label className="field-label" htmlFor="create-display">Tu nombre</label><input className="field" id="create-display" name="display_name" required maxLength={60} /><label className="field-label" htmlFor="family-name">Nombre de la familia</label><input className="field" id="family-name" name="family_name" required maxLength={80} /><button className="button-primary w-full" disabled={busy}>Crear familia</button></form>
       <form onSubmit={event => action(event, 'join')} className="space-y-3"><h3 className="font-bold">Unirme con invitación</h3><label className="field-label" htmlFor="join-display">Tu nombre</label><input className="field" id="join-display" name="display_name" required maxLength={60} /><label className="field-label" htmlFor="join-token">Código de invitación</label><input className="field" id="join-token" name="token" required maxLength={36} autoComplete="off" /><button className="button-primary w-full" disabled={busy}>Unirme a la familia</button></form>

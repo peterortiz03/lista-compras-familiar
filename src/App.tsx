@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FamilyContext } from './types.ts'
 import { AccountPanel } from './components/AccountPanel.tsx'
 import { ShoppingWorkspace } from './components/ShoppingWorkspace.tsx'
@@ -7,6 +7,7 @@ import { Icon } from './components/Icon.tsx'
 import { InstallApp } from './components/InstallApp.tsx'
 import { UsageGuide } from './components/UsageGuide.tsx'
 import { finishGuide, getCatalogSetup, shouldShowGuide } from './lib/onboarding.ts'
+import { shoppingNoticeFromUrl } from './lib/web-push.ts'
 
 export default function App() {
   const [accountOpen, setAccountOpen] = useState(false)
@@ -14,6 +15,7 @@ export default function App() {
   const [resolving, setResolving] = useState(!!supabase)
   const [manualGuide, setManualGuide] = useState(false)
   const [lastGuideUser, setLastGuideUser] = useState<string | null>(null)
+  const [notificationId] = useState(shoppingNoticeFromUrl)
   const shownCatalogSetup = useRef<string | null>(null)
   const handleFamily = useCallback((next: FamilyContext | null) => {
     setFamily(current => current?.id === next?.id && current?.userId === next?.userId && current?.name === next?.name && current?.ownerId === next?.ownerId ? current : next)
@@ -26,6 +28,13 @@ export default function App() {
     }
   }, [])
   const guideOpen = !resolving && (manualGuide || !!(family && lastGuideUser !== family.userId && shouldShowGuide(family.userId)))
+
+  useEffect(() => {
+    if (!notificationId) return
+    const url = new URL(window.location.href)
+    url.searchParams.delete('shopping')
+    window.history.replaceState(window.history.state, '', url)
+  }, [notificationId])
 
   function closeGuide(outcome: 'completed' | 'skipped') {
     if (family) {
@@ -47,7 +56,7 @@ export default function App() {
       <div id="cuenta" hidden={!accountOpen}>
         <AccountPanel onFamilyChange={handleFamily} onResolvingChange={setResolving} />
       </div>
-      <div id="contenido">{resolving ? <p role="status" className="surface p-5">Recuperando tu sesión y familia…</p> : <ShoppingWorkspace key={family ? `${family.userId}:${family.id}` : 'local'} family={family} guideOpen={guideOpen} />}</div>
+      <div id="contenido">{resolving ? <p role="status" className="surface p-5">Recuperando tu sesión y familia…</p> : <ShoppingWorkspace key={family ? `${family.userId}:${family.id}` : 'local'} family={family} guideOpen={guideOpen} notificationId={notificationId} />}</div>
       <footer className="mt-10 border-t border-line pt-5 text-xs text-muted">En casa · Lista familiar compartida</footer>
     </main>
     {guideOpen && <UsageGuide key={family?.userId ?? 'local'} onFinish={closeGuide} />}

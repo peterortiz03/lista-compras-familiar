@@ -29,14 +29,14 @@ function subscribeToConnection(callback: () => void) {
 
 interface Selection { product: Product; quantity: number; version?: string; note?: string; urgent?: boolean }
 
-export function ShoppingWorkspace({ family, guideOpen }: { family: FamilyContext | null; guideOpen: boolean }) {
+export function ShoppingWorkspace({ family, guideOpen, notificationId }: { family: FamilyContext | null; guideOpen: boolean; notificationId: string | null }) {
   const { state, error, ready, busy, lastSync, refresh, mutate } = useShoppingData(family)
   const [editing, setEditing] = useState<Selection | null>(null)
   const [buying, setBuying] = useState<Selection | null>(null)
   const [notice, setNotice] = useState('')
   const [operationError, setOperationError] = useState('')
   const [view, setView] = useState<'list' | 'catalog' | 'history'>('list')
-  const [setup, setSetup] = useState(() => family ? getCatalogSetup(family.userId, family.id) : null)
+  const [setup, setSetup] = useState(() => family && !notificationId ? getCatalogSetup(family.userId, family.id) : null)
   const [manualSetup, setManualSetup] = useState(false)
 
   const [formOpen, setFormOpen] = useState(false)
@@ -157,6 +157,8 @@ export function ShoppingWorkspace({ family, guideOpen }: { family: FamilyContext
     <nav aria-label="Secciones de compras" className="mb-5 flex flex-wrap gap-3">{([{ id: 'list', label: 'Lista' }, { id: 'catalog', label: 'Catálogo' }, { id: 'history', label: 'Historial' }] as const).map(entry => <button key={entry.id} id={`shopping-${entry.id}`} className={view === entry.id ? 'button-primary' : 'button-secondary'} type="button" aria-pressed={view === entry.id} onClick={() => { setView(entry.id); setEditing(null); setFormOpen(false); setOperationError('') }}>{entry.label}</button>)}</nav>
     {view === 'list' && family && ready && online && !error && (state.featuresVersion ?? 0) >= 10 &&
       <ShoppingNotice family={family} session={state.shoppingSession ?? null} onRefresh={refresh} />}
+    {view === 'list' && notificationId && ready && !error && state.shoppingSession?.id !== notificationId &&
+      <p role="status" className="mb-3 text-sm text-muted">El aviso de la notificación ya no está disponible.</p>}
     {view === 'list' && <button id="open-product-form" type="button" className="button-primary mb-3" disabled={disabled} onClick={() => openForm(null)}><Icon name="plus" size={18} />Agregar faltante</button>}
     {view === 'catalog' && family && ready && state.catalog.length === 0 && <details className="mb-3 text-sm">
       <summary className="min-h-11 cursor-pointer py-3 text-forest">Copiar datos de este dispositivo</summary>
